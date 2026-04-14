@@ -253,6 +253,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  if (page === "calendar") {
+    initCalendarPage();
+    return;
+  }
+
   if (page === "subjects") {
     initSubjectsPage();
     return;
@@ -390,52 +395,41 @@ function renderAppFrame() {
     navLectures.classList.toggle("active", page === "lectures");
   }
   if (navCalendar) {
-    navCalendar.classList.toggle("active", page === "dashboard");
+    navCalendar.classList.toggle("active", page === "calendar");
   }
   if (navSettings) {
     navSettings.classList.toggle("active", page === "settings");
   }
 
-  document.getElementById("logout-button").addEventListener("click", logout);
+  const logoutButton = document.getElementById("logout-button");
+  if (logoutButton) {
+    logoutButton.onclick = logout;
+  }
   bindThemeToggle();
   bindPageTransitions();
 }
 
 function initDashboardPage() {
   const lectures = getLectures();
-  const subjects = getSubjects();
   const userCompletions = getCurrentUserCompletions();
   renderStats(lectures, userCompletions);
-  renderTodaysFocus(lectures, subjects, userCompletions);
-  renderAnalytics(lectures, subjects, userCompletions);
+}
+
+function initCalendarPage() {
+  const lectures = getLectures();
+  const subjects = getSubjects();
+
   renderCalendar(lectures, subjects, {
     onDateSelect: (date) => {
       state.selectedDate = date;
-      initDashboardPage();
+      initCalendarPage();
     },
     onOpenLecture: (lecture) => {
       window.location.href = `lectures.html?subject=${lecture.subjectId}&date=${lecture.date}`;
     }
   });
-  renderNextAction(lectures, subjects, userCompletions);
-  maybeCelebrate(lectures, userCompletions);
 
-  document.getElementById("calendar-prev").addEventListener("click", () => {
-    const currentMonth = parseMonthKey(state.calendarMonth);
-    state.calendarMonth = getMonthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    initDashboardPage();
-  });
-  document.getElementById("calendar-next").addEventListener("click", () => {
-    const currentMonth = parseMonthKey(state.calendarMonth);
-    state.calendarMonth = getMonthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    initDashboardPage();
-  });
-  document.getElementById("calendar-today").addEventListener("click", () => {
-    const today = new Date();
-    state.calendarMonth = getMonthKey(today);
-    state.selectedDate = getLocalDateKey(today);
-    initDashboardPage();
-  });
+  bindCalendarNavigation(initCalendarPage);
 }
 
 function initSubjectsPage() {
