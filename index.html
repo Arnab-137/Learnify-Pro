@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Tracker Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="auth">
+  <div class="app-shell">
+    <section class="view auth-view">
+      <div class="auth-layout">
+        <div class="hero-panel">
+          <span class="eyebrow">Study Tracker</span>
+          <h1>Track every lecture, subject, and milestone in one focused workspace.</h1>
+          <p>Stay accountable with private progress, clean subject cards, and instant completion stats.</p>
+          <div class="hero-badges">
+            <span>Private progress</span>
+            <span>Subject analytics</span>
+            <span>Responsive design</span>
+          </div>
+        </div>
+        <div class="auth-card">
+          <div class="auth-tabs">
+            <button class="tab-button active" data-mode="login" type="button">Log In</button>
+            <button class="tab-button" data-mode="signup" type="button">Sign Up</button>
+          </div>
+          <form id="auth-form" class="auth-form">
+            <label>
+              <span>Email</span>
+              <input id="auth-email" type="email" placeholder="you@example.com" required>
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="auth-password" type="password" placeholder="Enter password" minlength="6" required>
+            </label>
+            <button id="auth-submit" class="primary-button" type="submit">Log In</button>
+          </form>
+          <p id="auth-message" class="status-text"></p>
+          <div class="auth-footer-note">
+            <span>Focused planning</span>
+            <span>Daily momentum</span>
+            <span>Private tracking</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

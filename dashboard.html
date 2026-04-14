@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Tracker Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="dashboard">
+  <div class="app-shell">
+    <section class="view app-frame">
+      <aside class="app-sidebar">
+        <div class="sidebar-brand">
+          <span class="eyebrow">Study Tracker</span>
+          <strong>Deep Work OS</strong>
+        </div>
+        <nav class="sidebar-nav">
+          <a id="nav-dashboard" class="sidebar-link active" href="dashboard.html">Dashboard</a>
+          <a id="nav-subjects" class="sidebar-link" href="subjects.html">Subjects</a>
+          <a id="nav-lectures" class="sidebar-link" href="lectures.html">Lectures</a>
+          <a id="nav-calendar" class="sidebar-link" href="dashboard.html#calendar-section">Calendar</a>
+          <a id="nav-settings" class="sidebar-link" href="settings.html">Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+          <p id="welcome-text" class="muted-text"></p>
+          <button id="theme-toggle" class="ghost-button" type="button">Toggle theme</button>
+          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Productivity Dashboard</span>
+            <h2 id="dashboard-date-title">Today</h2>
+            <p class="muted-text">Start with today’s focus, move to your next lecture, then enter deep work mode.</p>
+          </div>
+        </header>
+
+        <main class="content-grid dashboard-grid">
+          <section class="summary-panel">
+            <div class="summary-header">
+              <div>
+                <span class="eyebrow">Overall progress</span>
+                <h3>Completion overview</h3>
+              </div>
+              <div id="progress-ring" class="progress-ring">
+                <div class="progress-ring-inner">
+                  <strong id="overall-progress-value">0%</strong>
+                  <span>Done</span>
+                </div>
+              </div>
+            </div>
+            <div class="stats-grid">
+              <article class="stat-card"><span>Total Lectures</span><strong id="total-lectures">0</strong></article>
+              <article class="stat-card"><span>Completed</span><strong id="completed-lectures">0</strong></article>
+              <article class="stat-card"><span>Remaining</span><strong id="remaining-lectures">0</strong></article>
+              <article class="stat-card"><span>Current Streak</span><strong id="streak-count">0 days</strong></article>
+            </div>
+            <div class="progress-block">
+              <div class="progress-label-row">
+                <span>Overall completion</span>
+                <span id="overall-progress-label">0%</span>
+              </div>
+              <div class="progress-bar large"><span id="overall-progress-bar"></span></div>
+            </div>
+            <div class="daily-card">
+              <div>
+                <span class="eyebrow">Today</span>
+                <h4 id="daily-progress-title">No lectures finished yet</h4>
+              </div>
+              <p id="daily-progress-copy" class="muted-text"></p>
+            </div>
+            <div class="focus-stack">
+              <article class="action-card">
+                <div class="section-heading">
+                  <div>
+                    <span class="eyebrow">Next Action</span>
+                    <h4 id="next-action-title">No lecture selected</h4>
+                  </div>
+                  <span id="next-action-badge" class="status-pill">Ready</span>
+                </div>
+                <p id="next-action-copy" class="muted-text"></p>
+                <div class="action-card-actions">
+                  <a id="next-action-link" class="primary-button hidden" href="lectures.html">Start Now</a>
+                  <a id="resume-link" class="ghost-button hidden" href="lectures.html">Resume</a>
+                </div>
+              </article>
+              <article class="motivation-card">
+                <span class="eyebrow">Momentum</span>
+                <h4 id="motivation-title">You are just getting started</h4>
+                <p id="motivation-copy" class="muted-text"></p>
+                <div class="goal-row">
+                  <span>Daily goal</span>
+                  <strong id="daily-goal-status">0 / 3 completed</strong>
+                </div>
+                <div class="progress-bar">
+                  <span id="daily-goal-bar"></span>
+                </div>
+                <div class="goal-row">
+                  <span>XP & level</span>
+                  <strong id="xp-status">0 XP · Level 1</strong>
+                </div>
+                <div id="achievement-badges" class="achievement-badges"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="page-panel today-focus-panel">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">Today's Focus</span>
+                <h3 id="today-focus-title">Today's lectures</h3>
+              </div>
+              <span id="today-focus-time" class="status-pill">0 mins</span>
+            </div>
+            <p id="today-focus-copy" class="muted-text">Select a lecture to begin a focused session.</p>
+            <div class="today-focus-actions">
+              <a id="start-session-link" class="primary-button hidden" href="lectures.html">Start Session</a>
+              <a id="today-focus-open" class="ghost-button hidden" href="lectures.html">Open Today's List</a>
+            </div>
+            <div id="today-focus-list" class="today-focus-list"></div>
+          </section>
+
+          <section class="page-panel analytics-panel">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">Progress Analytics</span>
+                <h3>Weekly trend and subject comparison</h3>
+              </div>
+            </div>
+            <div class="analytics-grid">
+              <article class="chart-card">
+                <h4>Weekly Progress</h4>
+                <div id="weekly-chart" class="weekly-chart"></div>
+              </article>
+              <article class="chart-card">
+                <h4>Subject Comparison</h4>
+                <div id="subject-comparison" class="subject-comparison"></div>
+              </article>
+            </div>
+            <article class="chart-card heatmap-card">
+              <div class="section-heading">
+                <h4>Study Heatmap</h4>
+                <span class="muted-text">Last 28 days</span>
+              </div>
+              <div id="study-heatmap" class="study-heatmap"></div>
+            </article>
+          </section>
+
+          <section id="calendar-section" class="calendar-panel">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">Calendar</span>
+                <h3 id="calendar-title">This month</h3>
+                <p class="muted-text calendar-helper">Select a date to jump into that day's lectures and quick actions.</p>
+              </div>
+              <div class="calendar-controls">
+                <button id="calendar-prev" class="ghost-button" type="button">Prev</button>
+                <button id="calendar-today" class="ghost-button active" type="button">Today</button>
+                <button id="calendar-next" class="ghost-button" type="button">Next</button>
+              </div>
+            </div>
+            <div class="calendar-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+            <div id="calendar-agenda" class="calendar-agenda" tabindex="-1" aria-live="polite">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">Quick Access</span>
+                  <h4 id="today-lecture-heading">Selected day lectures</h4>
+                </div>
+                <a id="open-day-lectures" class="ghost-button hidden" href="lectures.html">Open full list</a>
+              </div>
+              <div id="today-lecture-list" class="today-lecture-list"></div>
+            </div>
+          </section>
+        </main>
+        <div id="celebration-banner" class="celebration-banner hidden" aria-live="polite">
+          <strong id="celebration-title">Milestone reached</strong>
+          <span id="celebration-copy">You are building serious momentum.</span>
+        </div>
+      </div>
+    </section>
+    <nav class="mobile-nav">
+      <a class="sidebar-link active" href="dashboard.html">Dashboard</a>
+      <a class="sidebar-link" href="subjects.html">Subjects</a>
+      <a class="sidebar-link" href="lectures.html">Lectures</a>
+      <a class="sidebar-link" href="settings.html">Settings</a>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

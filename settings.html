@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Tracker Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="settings">
+  <div class="app-shell">
+    <section class="view app-frame">
+      <aside class="app-sidebar">
+        <div class="sidebar-brand">
+          <span class="eyebrow">Study Tracker</span>
+          <strong>Deep Work OS</strong>
+        </div>
+        <nav class="sidebar-nav">
+          <a id="nav-dashboard" class="sidebar-link" href="dashboard.html">Dashboard</a>
+          <a id="nav-subjects" class="sidebar-link" href="subjects.html">Subjects</a>
+          <a id="nav-lectures" class="sidebar-link" href="lectures.html">Lectures</a>
+          <a id="nav-calendar" class="sidebar-link" href="dashboard.html#calendar-section">Calendar</a>
+          <a id="nav-settings" class="sidebar-link active" href="settings.html">Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+          <p id="welcome-text" class="muted-text"></p>
+          <button id="theme-toggle" class="ghost-button" type="button">Toggle theme</button>
+          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+        </div>
+      </aside>
+      <div class="app-main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Settings</span>
+            <h2>Personalize your workflow</h2>
+            <p class="muted-text">Theme, shortcuts, and study environment settings live here.</p>
+          </div>
+        </header>
+        <section class="page-panel">
+          <div class="focus-stack">
+            <article class="action-card">
+              <span class="eyebrow">Theme</span>
+              <h4>Switch light and dark</h4>
+              <p class="muted-text">Use the toggle to move between a bright planning view and a darker deep-work view.</p>
+              <button id="theme-toggle-secondary" class="primary-button" type="button">Toggle theme</button>
+            </article>
+            <article class="action-card">
+              <span class="eyebrow">Keyboard Shortcuts</span>
+              <h4>Move faster</h4>
+              <p class="muted-text">On the lectures page use <strong>N</strong> for your next lecture, <strong>C</strong> to mark the current one complete, and <strong>Esc</strong> to exit Focus Mode.</p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+    <nav class="mobile-nav">
+      <a class="sidebar-link" href="dashboard.html">Dashboard</a>
+      <a class="sidebar-link" href="subjects.html">Subjects</a>
+      <a class="sidebar-link" href="lectures.html">Lectures</a>
+      <a class="sidebar-link active" href="settings.html">Settings</a>
+    </nav>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

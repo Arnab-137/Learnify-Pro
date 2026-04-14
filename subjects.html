@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Tracker Subjects</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="subjects">
+  <div class="app-shell">
+    <section class="view app-frame">
+      <aside class="app-sidebar">
+        <div class="sidebar-brand">
+          <span class="eyebrow">Study Tracker</span>
+          <strong>Deep Work OS</strong>
+        </div>
+        <nav class="sidebar-nav">
+          <a id="nav-dashboard" class="sidebar-link" href="dashboard.html">Dashboard</a>
+          <a id="nav-subjects" class="sidebar-link active" href="subjects.html">Subjects</a>
+          <a id="nav-lectures" class="sidebar-link" href="lectures.html">Lectures</a>
+          <a id="nav-calendar" class="sidebar-link" href="dashboard.html#calendar-section">Calendar</a>
+          <a id="nav-settings" class="sidebar-link" href="settings.html">Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+          <p id="welcome-text" class="muted-text"></p>
+          <button id="theme-toggle" class="ghost-button" type="button">Toggle theme</button>
+          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Subjects</span>
+            <h2>Study by syllabus area</h2>
+            <p class="muted-text">Subjects are secondary to focus mode, but still great for planning and comparison.</p>
+          </div>
+        </header>
+
+        <section class="page-panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Subjects</span>
+              <h3>Choose a subject to open its lectures</h3>
+            </div>
+          </div>
+          <div id="subjects-grid" class="subjects-grid"></div>
+        </section>
+      </div>
+    </section>
+    <nav class="mobile-nav">
+      <a class="sidebar-link" href="dashboard.html">Dashboard</a>
+      <a class="sidebar-link active" href="subjects.html">Subjects</a>
+      <a class="sidebar-link" href="lectures.html">Lectures</a>
+      <a class="sidebar-link" href="settings.html">Settings</a>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
