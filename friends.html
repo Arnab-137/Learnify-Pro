@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learnify Pro Friends</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="friends">
+  <div class="app-shell">
+    <header class="app-header view">
+      <div class="app-brand">
+        <span class="eyebrow">Learnify Pro</span>
+        <strong>Learnify Pro</strong>
+      </div>
+      <nav class="app-nav" aria-label="Primary">
+        <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
+        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
+        <a id="nav-lectures" class="app-link" href="lectures.html">Lectures</a>
+        <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
+        <a id="nav-friends" class="app-link active" href="friends.html">Friends</a>
+        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
+        <a id="nav-settings" class="app-link" href="settings.html">Settings</a>
+      </nav>
+      <div class="app-user-bar">
+        <p id="welcome-text" class="muted-text"></p>
+        <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+      </div>
+    </header>
+
+    <section class="view page-view">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Friends</span>
+          <h2>Build your study circle</h2>
+          <p class="muted-text">Search learners, send requests, accept invites, and stay accountable together.</p>
+        </div>
+      </header>
+
+      <section class="page-panel">
+        <div class="competition-grid friends-page-grid">
+          <article class="action-card competition-card">
+            <div class="competition-heading">
+              <div>
+                <span class="eyebrow">Search</span>
+                <h4>Find learners</h4>
+              </div>
+            </div>
+            <div class="friend-form">
+              <input id="friend-search-input" class="search-input" type="search" placeholder="Search by name or email">
+              <button id="friend-search-button" class="primary-button" type="button">Search</button>
+            </div>
+            <p id="friend-search-status" class="muted-text compact-status">Search users from your live Study Tracker backend.</p>
+            <div id="friend-search-results" class="friends-list"></div>
+          </article>
+
+          <article class="action-card competition-card">
+            <div class="competition-heading">
+              <div>
+                <span class="eyebrow">Requests</span>
+                <h4>Pending invites</h4>
+              </div>
+            </div>
+            <div class="requests-stack">
+              <section class="competition-column">
+                <div class="competition-heading">
+                  <strong>Received</strong>
+                </div>
+                <div id="friend-requests-received" class="friends-list"></div>
+              </section>
+              <section class="competition-column">
+                <div class="competition-heading">
+                  <strong>Sent</strong>
+                </div>
+                <div id="friend-requests-sent" class="friends-list"></div>
+              </section>
+            </div>
+          </article>
+        </div>
+
+        <article class="action-card competition-card section-spaced">
+          <div class="competition-heading">
+            <div>
+              <span class="eyebrow">Your Circle</span>
+              <h4>Friends list</h4>
+            </div>
+            <span id="friends-count" class="status-pill">0 friends</span>
+          </div>
+          <div id="friends-list" class="friends-list"></div>
+        </article>
+      </section>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

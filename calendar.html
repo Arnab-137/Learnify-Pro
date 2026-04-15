@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learnify Pro Subjects</title>
+  <title>Learnify Pro Calendar</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-page="subjects">
+<body data-page="calendar">
   <div class="app-shell">
     <header class="app-header view">
       <div class="app-brand">
@@ -18,7 +18,7 @@
       </div>
       <nav class="app-nav" aria-label="Primary">
         <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
-        <a id="nav-subjects" class="app-link active" href="subjects.html">Subjects</a>
+        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
         <a id="nav-lectures" class="app-link" href="lectures.html">Lectures</a>
         <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
         <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
@@ -34,20 +34,39 @@
     <section class="view page-view">
       <header class="topbar">
         <div>
-          <span class="eyebrow">Subjects</span>
-          <h2>Study by syllabus area</h2>
-          <p class="muted-text">Subjects stay separate from the dashboard so planning and lecture execution each have a focused space.</p>
+          <span class="eyebrow">Calendar</span>
+          <h2>Plan by date</h2>
+          <p class="muted-text">Select a day to see the lectures scheduled there, open the resource, or mark them complete.</p>
         </div>
       </header>
 
-      <section class="page-panel">
+      <section id="calendar-section" class="calendar-panel">
         <div class="section-heading">
           <div>
-            <span class="eyebrow">Subjects</span>
-            <h3>Choose a subject to open its lectures</h3>
+            <span class="eyebrow">Calendar</span>
+            <h3 id="calendar-title">This month</h3>
+            <p class="muted-text calendar-helper">Click any date to open the quick action panel for that day.</p>
+          </div>
+          <div class="calendar-controls">
+            <button id="calendar-prev" class="ghost-button" type="button">Prev</button>
+            <button id="calendar-today" class="ghost-button active" type="button">Today</button>
+            <button id="calendar-next" class="ghost-button" type="button">Next</button>
           </div>
         </div>
-        <div id="subjects-grid" class="subjects-grid"></div>
+        <div class="calendar-weekdays">
+          <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <div id="calendar-agenda" class="calendar-agenda" tabindex="-1" aria-live="polite">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Quick Access</span>
+              <h4 id="today-lecture-heading">Selected day lectures</h4>
+            </div>
+            <a id="open-day-lectures" class="ghost-button hidden" href="lectures.html">Open full list</a>
+          </div>
+          <div id="today-lecture-list" class="today-lecture-list"></div>
+        </div>
       </section>
     </section>
   </div>

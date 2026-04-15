@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learnify Pro Subjects</title>
+  <title>Learnify Pro Leaderboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-page="subjects">
+<body data-page="leaderboard">
   <div class="app-shell">
     <header class="app-header view">
       <div class="app-brand">
@@ -18,11 +18,11 @@
       </div>
       <nav class="app-nav" aria-label="Primary">
         <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
-        <a id="nav-subjects" class="app-link active" href="subjects.html">Subjects</a>
+        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
         <a id="nav-lectures" class="app-link" href="lectures.html">Lectures</a>
         <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
         <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
-        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
+        <a id="nav-leaderboard" class="app-link active" href="leaderboard.html">Leaderboard</a>
         <a id="nav-settings" class="app-link" href="settings.html">Settings</a>
       </nav>
       <div class="app-user-bar">
@@ -34,20 +34,28 @@
     <section class="view page-view">
       <header class="topbar">
         <div>
-          <span class="eyebrow">Subjects</span>
-          <h2>Study by syllabus area</h2>
-          <p class="muted-text">Subjects stay separate from the dashboard so planning and lecture execution each have a focused space.</p>
+          <span class="eyebrow">Leaderboard</span>
+          <h2>Compare real progress</h2>
+          <p class="muted-text">Switch between the global board and your private friends-only ranking.</p>
         </div>
       </header>
 
-      <section class="page-panel">
-        <div class="section-heading">
+      <section class="page-panel competition-card">
+        <div class="competition-heading">
           <div>
-            <span class="eyebrow">Subjects</span>
-            <h3>Choose a subject to open its lectures</h3>
+            <span class="eyebrow">Ranking</span>
+            <h4>Performance board</h4>
           </div>
+          <span id="leaderboard-count" class="status-pill">0 learners</span>
         </div>
-        <div id="subjects-grid" class="subjects-grid"></div>
+
+        <div class="leaderboard-scope-toggle">
+          <button id="leaderboard-global" class="ghost-button active" type="button">Global</button>
+          <button id="leaderboard-friends" class="ghost-button" type="button">Friends</button>
+        </div>
+
+        <p id="rivalry-copy" class="muted-text rivalry-copy">Compare progress percentage, completed lectures, and streaks.</p>
+        <div id="leaderboard-list" class="leaderboard-list"></div>
       </section>
     </section>
   </div>

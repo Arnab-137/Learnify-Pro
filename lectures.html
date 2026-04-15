@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Tracker Lectures</title>
+  <title>Learnify Pro Lectures</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,69 +11,69 @@
 </head>
 <body data-page="lectures">
   <div class="app-shell">
-    <section class="view app-frame">
-      <aside class="app-sidebar">
-        <div class="sidebar-brand">
-          <span class="eyebrow">Study Tracker</span>
-          <strong>Deep Work OS</strong>
-        </div>
-        <nav id="main-sidebar-nav" class="sidebar-nav">
-          <a id="nav-dashboard" class="sidebar-link" href="dashboard.html">Dashboard</a>
-          <a id="nav-subjects" class="sidebar-link" href="subjects.html">Subjects</a>
-          <a id="nav-lectures" class="sidebar-link active" href="lectures.html">Lectures</a>
-          <a id="nav-calendar" class="sidebar-link" href="dashboard.html#calendar-section">Calendar</a>
-          <a id="nav-settings" class="sidebar-link" href="settings.html">Settings</a>
-        </nav>
-        <div class="sidebar-footer">
-          <p id="welcome-text" class="muted-text"></p>
-          <button id="theme-toggle" class="ghost-button" type="button">Toggle theme</button>
-          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
-        </div>
-      </aside>
-
-      <div class="app-main">
-        <header class="topbar">
-          <div>
-            <span class="eyebrow">Lecture Execution</span>
-            <h2>Next lecture, then deep work</h2>
-            <p class="muted-text">Search, filter, then enter Focus Mode when you are ready.</p>
-          </div>
-        </header>
-
-        <section class="page-panel lectures-page-panel">
-          <div class="section-heading">
-            <div>
-              <span class="eyebrow">Lectures</span>
-              <h3 id="lecture-section-title">All lectures</h3>
-              <p id="lecture-section-subtitle" class="muted-text">Stay on track with the right next lecture.</p>
-            </div>
-            <div class="lecture-panel-actions">
-              <div id="subject-playlists" class="subject-playlists"></div>
-              <button id="back-to-subjects" class="ghost-button hidden" type="button">Back to subjects</button>
-            </div>
-          </div>
-          <div class="filters-bar">
-            <input id="lecture-search" class="search-input" type="search" placeholder="Search lectures by title or subject">
-            <select id="lecture-status-filter" class="filter-select">
-              <option value="all">All states</option>
-              <option value="current">Current</option>
-              <option value="today">Today</option>
-              <option value="overdue">Overdue</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-          <div id="resume-banner" class="resume-banner hidden">
-            <div>
-              <span class="eyebrow">Resume Where You Left Off</span>
-              <strong id="resume-banner-title">Pick up your next lecture</strong>
-            </div>
-            <a id="resume-banner-link" class="primary-button" href="lectures.html">Resume</a>
-          </div>
-          <div id="lecture-list" class="lecture-list"></div>
-        </section>
+    <header class="app-header view">
+      <div class="app-brand">
+        <span class="eyebrow">Learnify Pro</span>
+        <strong>Learnify Pro</strong>
       </div>
+      <nav class="app-nav" aria-label="Primary">
+        <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
+        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
+        <a id="nav-lectures" class="app-link active" href="lectures.html">Lectures</a>
+        <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
+        <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
+        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
+        <a id="nav-settings" class="app-link" href="settings.html">Settings</a>
+      </nav>
+      <div class="app-user-bar">
+        <p id="welcome-text" class="muted-text"></p>
+        <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+      </div>
+    </header>
+
+    <section class="view page-view">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Lecture Execution</span>
+          <h2>Next lecture, then deep work</h2>
+          <p class="muted-text">Search, filter, and move into Focus Mode when you are ready to study.</p>
+        </div>
+      </header>
+
+      <section class="page-panel lectures-page-panel">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Lectures</span>
+            <h3 id="lecture-section-title">All lectures</h3>
+            <p id="lecture-section-subtitle" class="muted-text">Stay on track with the right next lecture.</p>
+          </div>
+          <div class="lecture-panel-actions">
+            <div id="subject-playlists" class="subject-playlists"></div>
+            <button id="back-to-subjects" class="ghost-button hidden" type="button">Back to subjects</button>
+          </div>
+        </div>
+        <div class="filters-bar">
+          <input id="lecture-search" class="search-input" type="search" placeholder="Search lectures by title or subject">
+          <select id="lecture-status-filter" class="filter-select">
+            <option value="all">All states</option>
+            <option value="current">Current</option>
+            <option value="today">Today</option>
+            <option value="overdue">Overdue</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div id="resume-banner" class="resume-banner hidden">
+          <div>
+            <span class="eyebrow">Resume Where You Left Off</span>
+            <strong id="resume-banner-title">Pick up your next lecture</strong>
+          </div>
+          <a id="resume-banner-link" class="primary-button" href="lectures.html">Resume</a>
+        </div>
+        <div id="lecture-list" class="lecture-list"></div>
+      </section>
     </section>
+
     <div id="focus-mode" class="focus-mode hidden" aria-modal="true" role="dialog">
       <div class="focus-mode-panel">
         <div class="focus-mode-header">
@@ -86,8 +86,18 @@
         </div>
         <div class="focus-grid">
           <div class="focus-timer-card">
-            <span class="eyebrow">Pomodoro</span>
-            <strong id="focus-timer-display">25:00</strong>
+            <span class="eyebrow">Deep Work Timer</span>
+            <strong id="focus-timer-display">02:00:00</strong>
+            <div class="focus-timer-editor">
+              <label class="timer-field">
+                <span>Hours</span>
+                <input id="focus-hours" type="number" min="0" max="12" value="2" inputmode="numeric">
+              </label>
+              <label class="timer-field">
+                <span>Minutes</span>
+                <input id="focus-minutes" type="number" min="0" max="59" value="0" inputmode="numeric">
+              </label>
+            </div>
             <div class="action-card-actions">
               <button id="focus-timer-toggle" class="primary-button" type="button">Start Timer</button>
               <button id="focus-timer-reset" class="ghost-button" type="button">Reset</button>
@@ -104,82 +114,8 @@
         </div>
       </div>
     </div>
-    <nav class="mobile-nav">
-      <a class="sidebar-link" href="dashboard.html">Dashboard</a>
-      <a class="sidebar-link" href="subjects.html">Subjects</a>
-      <a class="sidebar-link active" href="lectures.html">Lectures</a>
-      <a class="sidebar-link" href="settings.html">Settings</a>
-    </nav>
   </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
-*** Add File: C:\Users\arnab\OneDrive\Documents\New project\settings.html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Tracker Settings</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body data-page="settings">
-  <div class="app-shell">
-    <section class="view app-frame">
-      <aside class="app-sidebar">
-        <div class="sidebar-brand">
-          <span class="eyebrow">Study Tracker</span>
-          <strong>Deep Work OS</strong>
-        </div>
-        <nav class="sidebar-nav">
-          <a id="nav-dashboard" class="sidebar-link" href="dashboard.html">Dashboard</a>
-          <a id="nav-subjects" class="sidebar-link" href="subjects.html">Subjects</a>
-          <a id="nav-lectures" class="sidebar-link" href="lectures.html">Lectures</a>
-          <a id="nav-calendar" class="sidebar-link" href="dashboard.html#calendar-section">Calendar</a>
-          <a id="nav-settings" class="sidebar-link active" href="settings.html">Settings</a>
-        </nav>
-        <div class="sidebar-footer">
-          <p id="welcome-text" class="muted-text"></p>
-          <button id="theme-toggle" class="ghost-button" type="button">Toggle theme</button>
-          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
-        </div>
-      </aside>
-      <div class="app-main">
-        <header class="topbar">
-          <div>
-            <span class="eyebrow">Settings</span>
-            <h2>Personalize your study environment</h2>
-            <p class="muted-text">Theme, shortcuts, and focus preferences live here.</p>
-          </div>
-        </header>
-        <section class="page-panel">
-          <div class="focus-stack">
-            <article class="action-card">
-              <span class="eyebrow">Theme</span>
-              <h4>Choose your working mood</h4>
-              <p class="muted-text">Switch between light and dark without losing context.</p>
-              <button id="theme-toggle-secondary" class="primary-button" type="button">Toggle theme</button>
-            </article>
-            <article class="action-card">
-              <span class="eyebrow">Keyboard Shortcuts</span>
-              <h4>Faster control</h4>
-              <p class="muted-text">Press <strong>N</strong> for next lecture and <strong>C</strong> to complete the active one on the lectures page.</p>
-            </article>
-          </div>
-        </section>
-      </div>
-    </section>
-    <nav class="mobile-nav">
-      <a class="sidebar-link" href="dashboard.html">Dashboard</a>
-      <a class="sidebar-link" href="subjects.html">Subjects</a>
-      <a class="sidebar-link" href="lectures.html">Lectures</a>
-      <a class="sidebar-link active" href="settings.html">Settings</a>
-    </nav>
-  </div>
   <script src="app.js"></script>
 </body>
 </html>

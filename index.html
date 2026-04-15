@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Tracker Login</title>
+  <title>Learnify Pro Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <section class="view auth-view">
       <div class="auth-layout">
         <div class="hero-panel">
-          <span class="eyebrow">Study Tracker</span>
+          <span class="eyebrow">Learnify Pro</span>
           <h1>Track every lecture, subject, and milestone in one focused workspace.</h1>
           <p>Stay accountable with private progress, clean subject cards, and instant completion stats.</p>
           <div class="hero-badges">
@@ -29,6 +29,10 @@
             <button class="tab-button" data-mode="signup" type="button">Sign Up</button>
           </div>
           <form id="auth-form" class="auth-form">
+            <label id="auth-name-field" class="hidden">
+              <span>Name</span>
+              <input id="auth-name" type="text" placeholder="Your name">
+            </label>
             <label>
               <span>Email</span>
               <input id="auth-email" type="email" placeholder="you@example.com" required>

@@ -1,23 +1,27 @@
 # Study Tracker
 
-Study Tracker is a responsive front-end web app for tracking lecture-wise syllabus completion.
+This workspace now contains:
 
-## Features
+- the existing frontend in the project root
+- a new production-ready backend in [backend](C:\Users\arnab\OneDrive\Documents\New project\backend)
 
-- Email/password signup and login
-- User-specific completion tracking
-- Overall progress statistics and circular progress chart
-- Subject-wise cards with progress bars
-- Lecture list with watch links and completion checkboxes
-- Daily completion summary and simple streak count
-- Responsive mobile and desktop layout
+## Frontend
 
-## Run
+The current frontend still runs as static files:
 
-Open [index.html](C:\Users\arnab\OneDrive\Documents\New project\index.html) in a browser.
+- [index.html](C:\Users\arnab\OneDrive\Documents\New project\index.html)
+- [dashboard.html](C:\Users\arnab\OneDrive\Documents\New project\dashboard.html)
+- [subjects.html](C:\Users\arnab\OneDrive\Documents\New project\subjects.html)
+- [lectures.html](C:\Users\arnab\OneDrive\Documents\New project\lectures.html)
 
-## Notes
+## Backend
 
-- This version uses `localStorage` for users, session, and completion data.
-- Subjects and lectures are shared seed data visible to all users of the browser.
-- Completion records are filtered per logged-in user.
+The backend is built with:
+
+- Node.js
+- Express.js
+- MongoDB Atlas + Mongoose
+- JWT authentication
+- bcrypt password hashing
+
+Backend docs and setup instructions are in [backend/README.md](C:\Users\arnab\OneDrive\Documents\New project\backend\README.md).

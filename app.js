@@ -1,15 +1,18 @@
 const STORAGE_KEYS = {
-  users: "study-tracker-users",
   session: "study-tracker-session",
-  completions: "study-tracker-completions",
-  seedVersion: "study-tracker-seed-version",
-  subjects: "study-tracker-subjects",
-  lectures: "study-tracker-lectures",
   theme: "study-tracker-theme",
   lastViewedLecture: "study-tracker-last-viewed-lecture",
   lastCelebration: "study-tracker-last-celebration",
-  lectureNotes: "study-tracker-lecture-notes"
+  lectureNotes: "study-tracker-lecture-notes",
+  apiBaseUrl: "study-tracker-api-base-url"
 };
+
+const DEFAULT_API_BASE_URL = (() => {
+  if (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return "http://localhost:5000/api";
+  }
+  return `${window.location.origin}/api`;
+})();
 
 const ESTIMATED_LECTURE_MINUTES = 45;
 
@@ -219,19 +222,21 @@ const state = {
   authMode: "login",
   currentUser: null,
   calendarMonth: null,
-  selectedDate: null
+  selectedDate: null,
+  currentSubjects: [],
+  currentLectures: [],
+  currentCompletions: []
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  seedSharedData();
-  state.currentUser = getCurrentUser();
-
+document.addEventListener("DOMContentLoaded", async () => {
   const page = document.body.dataset.page;
 
   if (page === "auth") {
-    initAuthPage();
+    await initAuthPage();
     return;
   }
+
+  state.currentUser = await hydrateCurrentUser();
 
   if (!state.currentUser) {
     window.location.href = "index.html";
@@ -249,22 +254,32 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAppFrame();
 
   if (page === "dashboard") {
-    initDashboardPage();
+    await initDashboardPage();
     return;
   }
 
   if (page === "calendar") {
-    initCalendarPage();
+    await initCalendarPage();
     return;
   }
 
   if (page === "subjects") {
-    initSubjectsPage();
+    await initSubjectsPage();
+    return;
+  }
+
+  if (page === "friends") {
+    await initFriendsPage();
+    return;
+  }
+
+  if (page === "leaderboard") {
+    await initLeaderboardPage();
     return;
   }
 
   if (page === "lectures") {
-    initLecturesPage();
+    await initLecturesPage();
     return;
   }
 
@@ -272,14 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initSettingsPage();
   }
 });
-
-function seedSharedData() {
-  if (readStorage(STORAGE_KEYS.seedVersion, 0) !== DATA_SEED_VERSION) {
-    localStorage.setItem(STORAGE_KEYS.subjects, JSON.stringify(seedSubjects));
-    localStorage.setItem(STORAGE_KEYS.lectures, JSON.stringify(seedLectures));
-    localStorage.setItem(STORAGE_KEYS.seedVersion, JSON.stringify(DATA_SEED_VERSION));
-  }
-}
 
 function readStorage(key, fallback) {
   try {
@@ -294,24 +301,189 @@ function writeStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-function getUsers() {
-  return readStorage(STORAGE_KEYS.users, []);
+function getApiBaseUrl() {
+  return localStorage.getItem(STORAGE_KEYS.apiBaseUrl) || DEFAULT_API_BASE_URL;
 }
 
-function getSubjects() {
-  return readStorage(STORAGE_KEYS.subjects, seedSubjects);
+function saveApiBaseUrl(value) {
+  if (value?.trim()) {
+    localStorage.setItem(STORAGE_KEYS.apiBaseUrl, value.trim().replace(/\/+$/, ""));
+    return;
+  }
+
+  localStorage.removeItem(STORAGE_KEYS.apiBaseUrl);
 }
 
-function getLectures() {
-  return readStorage(STORAGE_KEYS.lectures, seedLectures);
+function getStoredSession() {
+  return readStorage(STORAGE_KEYS.session, null);
 }
 
-function getCompletions() {
-  return readStorage(STORAGE_KEYS.completions, []);
+function saveSession(session) {
+  writeStorage(STORAGE_KEYS.session, session);
 }
 
-function initAuthPage() {
+function clearSession() {
+  localStorage.removeItem(STORAGE_KEYS.session);
+}
+
+function getAuthToken() {
+  return getStoredSession()?.token || null;
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const requestUrl = `${getApiBaseUrl()}${path}`;
+  let response;
+  try {
+    response = await fetch(requestUrl, {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    throw new Error(`Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`);
+  }
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+    }
+    throw new Error(payload?.message || "Request failed.");
+  }
+
+  return payload;
+}
+
+async function hydrateCurrentUser() {
+  const session = getStoredSession();
+  if (!session?.token) {
+    return null;
+  }
+
+  try {
+    const response = await apiRequest("/auth/me");
+    const user = normalizeUser(response.data?.user);
+    saveSession({
+      token: session.token,
+      user
+    });
+    return user;
+  } catch (error) {
+    clearSession();
+    return null;
+  }
+}
+
+function normalizeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id || user._id,
+    name: user.name,
+    email: user.email
+  };
+}
+
+function normalizeDateValue(dateValue) {
+  if (!dateValue) {
+    return null;
+  }
+  return getLocalDateKey(new Date(dateValue));
+}
+
+function buildSubjectPlaylists(subjectId, lectures) {
+  const uniqueLinks = Array.from(
+    new Set(
+      lectures
+        .filter((lecture) => lecture.subjectId === subjectId && lecture.youtubeLink)
+        .map((lecture) => lecture.youtubeLink)
+    )
+  );
+
+  return uniqueLinks.map((link, index) => ({
+    name: uniqueLinks.length === 1 ? "Open Resource" : `Resource ${index + 1}`,
+    link
+  }));
+}
+
+function normalizeLecture(rawLecture) {
+  return {
+    id: rawLecture.id || rawLecture._id,
+    title: rawLecture.title,
+    subjectId: rawLecture.subject?.id || rawLecture.subject?._id || rawLecture.subjectId,
+    subjectName: rawLecture.subject?.name || rawLecture.subjectName || "Subject",
+    youtubeLink: rawLecture.youtubeLink || "",
+    date: normalizeDateValue(rawLecture.date),
+    lectureNumber: rawLecture.lectureNumber,
+    isCompleted: Boolean(rawLecture.isCompleted),
+    completedAt: normalizeDateValue(rawLecture.completedAt)
+  };
+}
+
+async function loadStudyData() {
+  const subjectResponse = await apiRequest("/subjects");
+  const subjectRows = subjectResponse.data || [];
+  const subjects = subjectRows.map((subject) => ({
+    id: subject.id || subject._id,
+    name: subject.name,
+    totalLectures: subject.totalLectures || 0,
+    completedLectures: subject.completedLectures || 0,
+    progressPercentage: subject.progressPercentage || 0,
+    lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
+    playlists: []
+  }));
+
+  const lectureResponses = await Promise.all(
+    subjects.map((subject) => apiRequest(`/subjects/${subject.id}/lectures`))
+  );
+
+  const lectures = lectureResponses.flatMap((response) =>
+    (response.data?.lectures || []).map(normalizeLecture)
+  );
+
+  subjects.forEach((subject) => {
+    subject.playlists = buildSubjectPlaylists(subject.id, lectures);
+  });
+
+  const completions = lectures
+    .filter((lecture) => lecture.isCompleted)
+    .map((lecture) => ({
+      lectureId: lecture.id,
+      completed: true,
+      completedAt: lecture.completedAt
+    }));
+
+  state.currentSubjects = subjects;
+  state.currentLectures = lectures;
+  state.currentCompletions = completions;
+
+  return {
+    subjects,
+    lectures,
+    userCompletions: completions
+  };
+}
+
+async function initAuthPage() {
   const form = document.getElementById("auth-form");
+  const nameField = document.getElementById("auth-name-field");
+  const nameInput = document.getElementById("auth-name");
   const emailInput = document.getElementById("auth-email");
   const passwordInput = document.getElementById("auth-password");
   const submitButton = document.getElementById("auth-submit");
@@ -323,12 +495,29 @@ function initAuthPage() {
       state.authMode = button.dataset.mode;
       tabButtons.forEach((tab) => tab.classList.toggle("active", tab === button));
       submitButton.textContent = state.authMode === "login" ? "Log In" : "Create Account";
+      if (nameField && nameInput) {
+        const showName = state.authMode === "signup";
+        nameField.classList.toggle("hidden", !showName);
+        nameInput.required = showName;
+      }
       messageNode.textContent = "";
     });
   });
 
-  form.addEventListener("submit", (event) => {
+  if (nameField && nameInput) {
+    nameField.classList.add("hidden");
+    nameInput.required = false;
+  }
+
+  const currentUser = await hydrateCurrentUser();
+  if (currentUser) {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const name = nameInput?.value.trim() ?? "";
     const email = emailInput.value.trim().toLowerCase();
     const password = passwordInput.value.trim();
 
@@ -337,53 +526,47 @@ function initAuthPage() {
       return;
     }
 
-    if (state.authMode === "signup") {
-      const existing = getUsers().find((user) => user.email === email);
-      if (existing) {
-        messageNode.textContent = "That email already has an account.";
-        return;
-      }
+    messageNode.textContent = "Connecting to backend...";
 
-      const newUser = {
-        id: crypto.randomUUID(),
-        email,
-        password
-      };
+    try {
+      const path = state.authMode === "signup" ? "/auth/signup" : "/auth/login";
+      const payload = state.authMode === "signup"
+        ? { name, email, password }
+        : { email, password };
 
-      writeStorage(STORAGE_KEYS.users, [...getUsers(), newUser]);
-      writeStorage(STORAGE_KEYS.session, { userId: newUser.id });
+      const response = await apiRequest(path, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      const user = normalizeUser(response.data?.user);
+      saveSession({
+        token: response.data?.token,
+        user
+      });
       window.location.href = "dashboard.html";
-      return;
+    } catch (error) {
+      messageNode.textContent = error.message || "Authentication failed.";
     }
-
-    const user = getUsers().find((item) => item.email === email && item.password === password);
-    if (!user) {
-      messageNode.textContent = "Invalid email or password.";
-      return;
-    }
-
-    writeStorage(STORAGE_KEYS.session, { userId: user.id });
-    window.location.href = "dashboard.html";
   });
 }
 
 function renderAppFrame() {
   applyTheme();
   const userBadge = document.getElementById("welcome-text");
-  const dashboardDateTitle = document.getElementById("dashboard-date-title");
   if (userBadge) {
-    userBadge.textContent = `Signed in as ${state.currentUser.email}`;
-  }
-  if (dashboardDateTitle) {
-    dashboardDateTitle.textContent = `Today, ${new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}`;
+    userBadge.textContent = getUserDisplayName(state.currentUser);
   }
 
   const page = document.body.dataset.page;
   const navDashboard = document.getElementById("nav-dashboard");
   const navSubjects = document.getElementById("nav-subjects");
   const navLectures = document.getElementById("nav-lectures");
-  const navCalendar = document.getElementById("nav-calendar");
+  const navFocus = document.getElementById("nav-focus");
+  const navFriends = document.getElementById("nav-friends");
+  const navLeaderboard = document.getElementById("nav-leaderboard");
   const navSettings = document.getElementById("nav-settings");
+  const focusModeRequested = getQueryParam("focus") === "1";
 
   if (navDashboard) {
     navDashboard.classList.toggle("active", page === "dashboard");
@@ -392,10 +575,16 @@ function renderAppFrame() {
     navSubjects.classList.toggle("active", page === "subjects");
   }
   if (navLectures) {
-    navLectures.classList.toggle("active", page === "lectures");
+    navLectures.classList.toggle("active", page === "lectures" && !focusModeRequested);
   }
-  if (navCalendar) {
-    navCalendar.classList.toggle("active", page === "calendar");
+  if (navFocus) {
+    navFocus.classList.toggle("active", page === "lectures" && focusModeRequested);
+  }
+  if (navFriends) {
+    navFriends.classList.toggle("active", page === "friends");
+  }
+  if (navLeaderboard) {
+    navLeaderboard.classList.toggle("active", page === "leaderboard");
   }
   if (navSettings) {
     navSettings.classList.toggle("active", page === "settings");
@@ -409,20 +598,29 @@ function renderAppFrame() {
   bindPageTransitions();
 }
 
-function initDashboardPage() {
-  const lectures = getLectures();
-  const userCompletions = getCurrentUserCompletions();
+async function initDashboardPage() {
+  const { lectures, subjects, userCompletions } = await loadStudyData();
   renderStats(lectures, userCompletions);
+  renderNextAction(lectures, subjects, userCompletions);
+  renderCalendar(lectures, subjects, {
+    onDateSelect: (date) => {
+      state.selectedDate = date;
+      void initDashboardPage();
+    },
+    onOpenLecture: (lecture) => {
+      window.location.href = `lectures.html?subject=${lecture.subjectId}&date=${lecture.date}`;
+    }
+  });
+  bindCalendarNavigation(initDashboardPage);
 }
 
-function initCalendarPage() {
-  const lectures = getLectures();
-  const subjects = getSubjects();
+async function initCalendarPage() {
+  const { lectures, subjects } = await loadStudyData();
 
   renderCalendar(lectures, subjects, {
     onDateSelect: (date) => {
       state.selectedDate = date;
-      initCalendarPage();
+      void initCalendarPage();
     },
     onOpenLecture: (lecture) => {
       window.location.href = `lectures.html?subject=${lecture.subjectId}&date=${lecture.date}`;
@@ -432,19 +630,24 @@ function initCalendarPage() {
   bindCalendarNavigation(initCalendarPage);
 }
 
-function initSubjectsPage() {
-  const lectures = getLectures();
-  const subjects = getSubjects();
-  const userCompletions = getCurrentUserCompletions();
+async function initSubjectsPage() {
+  const { lectures, subjects, userCompletions } = await loadStudyData();
   renderSubjects(subjects, lectures, userCompletions, true);
 }
 
-function initLecturesPage() {
-  const lectures = getLectures();
-  const subjects = getSubjects();
-  const userCompletions = getCurrentUserCompletions();
+async function initFriendsPage() {
+  await renderFriendsPanel();
+}
+
+async function initLeaderboardPage() {
+  await renderLeaderboardPanel();
+}
+
+async function initLecturesPage() {
+  const { lectures, subjects, userCompletions } = await loadStudyData();
   const selectedSubjectId = getQueryParam("subject");
   const selectedDate = getQueryParam("date");
+  const focusModeRequested = getQueryParam("focus") === "1";
 
   renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
   renderResumeBanner(lectures, subjects);
@@ -459,22 +662,486 @@ function initLecturesPage() {
       window.location.href = "subjects.html";
     });
   }
+
+  if (focusModeRequested) {
+    const focusLecture = getNextLecture(lectures, userCompletions, selectedSubjectId)
+      || getLastViewedLecture(lectures);
+    if (focusLecture) {
+      const focusSubject = subjects.find((item) => item.id === focusLecture.subjectId);
+      openFocusMode(focusLecture, focusSubject);
+    }
+  }
 }
 
 function initSettingsPage() {
+  applyTheme();
+  const apiInput = document.getElementById("api-base-url");
+  const apiButton = document.getElementById("save-api-base-url");
+  const apiStatus = document.getElementById("api-base-url-status");
+
+  if (apiInput && apiStatus) {
+    apiInput.value = getApiBaseUrl();
+    apiStatus.textContent = `Current API endpoint: ${getApiBaseUrl()}`;
+  }
+
+  if (apiInput && apiButton && apiStatus) {
+    apiButton.onclick = () => {
+      saveApiBaseUrl(apiInput.value);
+      apiStatus.textContent = `Current API endpoint: ${getApiBaseUrl()}`;
+    };
+  }
 }
 
 function logout() {
-  localStorage.removeItem(STORAGE_KEYS.session);
+  clearSession();
   window.location.href = "index.html";
 }
 
 function getCurrentUser() {
-  const session = readStorage(STORAGE_KEYS.session, null);
-  if (!session?.userId) {
-    return null;
+  return getStoredSession()?.user || null;
+}
+
+function getUserDisplayName(user) {
+  if (!user) {
+    return "";
   }
-  return getUsers().find((item) => item.id === session.userId) || null;
+  if (user.name?.trim()) {
+    return user.name.trim();
+  }
+  if (user.email?.includes("@")) {
+    return user.email.split("@")[0];
+  }
+  return "Learner";
+}
+
+function renderCompetitionPanel() {
+  return;
+  const form = document.getElementById("friend-form");
+  const emailInput = document.getElementById("friend-email");
+  const message = document.getElementById("friend-message");
+  const list = document.getElementById("friends-list");
+  const leaderboard = document.getElementById("leaderboard-list");
+  const rivalryCopy = document.getElementById("rivalry-copy");
+  if (!form || !emailInput || !message || !list || !leaderboard || !rivalryCopy) {
+    return;
+  }
+
+  const render = () => {
+    const users = getUsers();
+    const lectures = getLectures();
+    const friendIds = getCurrentUserFriendIds();
+    const friends = users.filter((user) => friendIds.includes(user.id));
+
+    list.innerHTML = "";
+    if (!friends.length) {
+      list.innerHTML = `<div class="empty-state compact">No friends added yet. Add a friend by email to start competing on progress and streaks.</div>`;
+    } else {
+      friends
+        .sort((a, b) => getUserDisplayName(a).localeCompare(getUserDisplayName(b)))
+        .forEach((friend) => {
+          const stats = getCompetitionStats(friend, lectures);
+          const chip = document.createElement("article");
+          chip.className = "friend-chip";
+          chip.innerHTML = `
+            <div>
+              <strong>${getUserDisplayName(friend)}</strong>
+              <span class="muted-text">${friend.email}</span>
+            </div>
+            <div class="friend-chip-meta">
+              <span>${stats.progress}% progress</span>
+              <span>${stats.streak} day streak</span>
+            </div>
+          `;
+          list.appendChild(chip);
+        });
+    }
+
+    const competitors = [state.currentUser, ...friends]
+      .map((user) => ({
+        user,
+        stats: getCompetitionStats(user, lectures)
+      }))
+      .sort((a, b) =>
+        b.stats.completed - a.stats.completed ||
+        b.stats.progress - a.stats.progress ||
+        b.stats.streak - a.stats.streak ||
+        getUserDisplayName(a.user).localeCompare(getUserDisplayName(b.user))
+      );
+
+    leaderboard.innerHTML = "";
+    competitors.forEach((entry, index) => {
+      const row = document.createElement("div");
+      row.className = `leaderboard-row${entry.user.id === state.currentUser.id ? " is-current-user" : ""}`;
+      row.innerHTML = `
+        <span class="leaderboard-rank">#${index + 1}</span>
+        <div class="leaderboard-user">
+          <strong>${getUserDisplayName(entry.user)}</strong>
+          <span class="muted-text">${entry.stats.completed} completed • ${entry.stats.progress}% progress</span>
+        </div>
+        <span class="leaderboard-streak">${entry.stats.streak} day streak</span>
+      `;
+      leaderboard.appendChild(row);
+    });
+
+    rivalryCopy.textContent = getRivalryMessage(competitors);
+  };
+
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    const email = emailInput.value.trim().toLowerCase();
+    if (!email) {
+      message.textContent = "Enter your friend's email.";
+      return;
+    }
+
+    if (email === state.currentUser.email) {
+      message.textContent = "You cannot add yourself as a friend.";
+      return;
+    }
+
+    const friend = getUsers().find((user) => user.email === email);
+    if (!friend) {
+      message.textContent = "No user with that email exists in this app yet.";
+      return;
+    }
+
+    if (getCurrentUserFriendIds().includes(friend.id)) {
+      message.textContent = "That friend is already on your competition board.";
+      return;
+    }
+
+    saveFriendship(state.currentUser.id, friend.id);
+    emailInput.value = "";
+    message.textContent = `${getUserDisplayName(friend)} added to your competition board.`;
+    render();
+  };
+
+  render();
+}
+
+function getCompetitionEntries() {
+  return {
+    lectures: state.currentLectures || [],
+    friends: [],
+    competitors: []
+  };
+  const users = getUsers();
+  const lectures = getLectures();
+  const friendIds = getCurrentUserFriendIds();
+  const friends = users.filter((user) => friendIds.includes(user.id));
+  const competitors = [state.currentUser, ...friends]
+    .map((user) => ({
+      user,
+      stats: getCompetitionStats(user, lectures)
+    }))
+    .sort((a, b) =>
+      b.stats.completed - a.stats.completed ||
+      b.stats.progress - a.stats.progress ||
+      b.stats.streak - a.stats.streak ||
+      getUserDisplayName(a.user).localeCompare(getUserDisplayName(b.user))
+    );
+
+  return { lectures, friends, competitors };
+}
+
+async function renderFriendsPanel() {
+  const searchInput = document.getElementById("friend-search-input");
+  const searchButton = document.getElementById("friend-search-button");
+  const searchStatus = document.getElementById("friend-search-status");
+  const searchResults = document.getElementById("friend-search-results");
+  const friendsList = document.getElementById("friends-list");
+  const friendsCount = document.getElementById("friends-count");
+  const receivedList = document.getElementById("friend-requests-received");
+  const sentList = document.getElementById("friend-requests-sent");
+
+  if (!searchInput || !searchButton || !searchStatus || !searchResults || !friendsList || !receivedList || !sentList) {
+    return;
+  }
+
+  const renderFriendCards = (container, items, emptyMessage) => {
+    container.innerHTML = "";
+    if (!items.length) {
+      container.innerHTML = `<div class="empty-state compact">${emptyMessage}</div>`;
+      return;
+    }
+
+    items.forEach((friend) => {
+      const card = document.createElement("article");
+      card.className = "friend-chip";
+      card.innerHTML = `
+        <div>
+          <strong>${friend.name}</strong>
+          <span class="muted-text">${friend.email}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  };
+
+  const loadFriendsData = async () => {
+    const [friendsResponse, requestsResponse] = await Promise.all([
+      apiRequest("/friends/list"),
+      apiRequest("/friends/requests")
+    ]);
+
+    const friends = friendsResponse.data || [];
+    const requests = requestsResponse.data || { sent: [], received: [] };
+
+    if (friendsCount) {
+      friendsCount.textContent = `${friends.length} friend${friends.length === 1 ? "" : "s"}`;
+    }
+
+    renderFriendCards(
+      friendsList,
+      friends,
+      "No friends added yet. Search for learners and send your first request."
+    );
+
+    receivedList.innerHTML = "";
+    if (!requests.received.length) {
+      receivedList.innerHTML = `<div class="empty-state compact">No incoming requests right now.</div>`;
+    } else {
+      requests.received.forEach((friend) => {
+        const card = document.createElement("article");
+        card.className = "friend-chip";
+        card.innerHTML = `
+          <div>
+            <strong>${friend.name}</strong>
+            <span class="muted-text">${friend.email}</span>
+          </div>
+          <div class="friend-chip-meta">
+            <button class="ghost-button accept-request" type="button">Accept</button>
+            <button class="ghost-button danger reject-request" type="button">Reject</button>
+          </div>
+        `;
+        card.querySelector(".accept-request").onclick = async () => {
+          await apiRequest(`/friends/accept/${friend.id}`, { method: "POST" });
+          await loadFriendsData();
+        };
+        card.querySelector(".reject-request").onclick = async () => {
+          await apiRequest(`/friends/reject/${friend.id}`, { method: "POST" });
+          await loadFriendsData();
+        };
+        receivedList.appendChild(card);
+      });
+    }
+
+    sentList.innerHTML = "";
+    if (!requests.sent.length) {
+      sentList.innerHTML = `<div class="empty-state compact">No outgoing requests yet.</div>`;
+    } else {
+      requests.sent.forEach((friend) => {
+        const card = document.createElement("article");
+        card.className = "friend-chip";
+        card.innerHTML = `
+          <div>
+            <strong>${friend.name}</strong>
+            <span class="muted-text">${friend.email}</span>
+          </div>
+          <div class="friend-chip-meta">
+            <span>Pending</span>
+          </div>
+        `;
+        sentList.appendChild(card);
+      });
+    }
+  };
+
+  const runSearch = async () => {
+    const query = searchInput.value.trim();
+    if (!query) {
+      searchStatus.textContent = "Enter a name or email to search.";
+      searchResults.innerHTML = `<div class="empty-state compact">Search results will appear here.</div>`;
+      return;
+    }
+
+    searchStatus.textContent = "Searching...";
+    try {
+      const response = await apiRequest(`/friends/search?q=${encodeURIComponent(query)}`);
+      const results = response.data || [];
+      searchResults.innerHTML = "";
+
+      if (!results.length) {
+        searchStatus.textContent = "No matching users found.";
+        searchResults.innerHTML = `<div class="empty-state compact">No learners matched your search.</div>`;
+        return;
+      }
+
+      searchStatus.textContent = `${results.length} learner${results.length === 1 ? "" : "s"} found.`;
+      results.forEach((result) => {
+        const card = document.createElement("article");
+        card.className = "friend-chip";
+        const actionLabel = result.isFriend
+          ? "Already friends"
+          : result.requestSent
+            ? "Request sent"
+            : result.requestReceived
+              ? "Incoming request"
+              : "Add friend";
+
+        card.innerHTML = `
+          <div>
+            <strong>${result.name}</strong>
+            <span class="muted-text">${result.email}</span>
+          </div>
+          <div class="friend-chip-meta">
+            <button class="ghost-button search-action" type="button" ${result.isFriend || result.requestSent ? "disabled" : ""}>${actionLabel}</button>
+          </div>
+        `;
+
+        const actionButton = card.querySelector(".search-action");
+        if (!result.isFriend && !result.requestSent && !result.requestReceived) {
+          actionButton.classList.add("primary-button");
+          actionButton.classList.remove("ghost-button");
+          actionButton.onclick = async () => {
+            await apiRequest(`/friends/request/${result.id}`, { method: "POST" });
+            await loadFriendsData();
+            await runSearch();
+          };
+        }
+
+        if (result.requestReceived) {
+          actionButton.onclick = async () => {
+            await apiRequest(`/friends/accept/${result.id}`, { method: "POST" });
+            await loadFriendsData();
+            await runSearch();
+          };
+          actionButton.classList.add("primary-button");
+          actionButton.classList.remove("ghost-button");
+          actionButton.textContent = "Accept request";
+        }
+
+        searchResults.appendChild(card);
+      });
+    } catch (error) {
+      searchStatus.textContent = error.message || "Search failed.";
+      searchResults.innerHTML = `<div class="empty-state compact">Unable to search users right now.</div>`;
+    }
+  };
+
+  searchButton.onclick = () => {
+    void runSearch();
+  };
+
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void runSearch();
+    }
+  });
+
+  searchResults.innerHTML = `<div class="empty-state compact">Search results will appear here.</div>`;
+  try {
+    await loadFriendsData();
+  } catch (error) {
+    searchStatus.textContent = error.message || "Unable to load friends data.";
+    friendsList.innerHTML = `<div class="empty-state compact">Unable to load your friends right now.</div>`;
+    receivedList.innerHTML = `<div class="empty-state compact">Unable to load requests right now.</div>`;
+    sentList.innerHTML = `<div class="empty-state compact">Unable to load requests right now.</div>`;
+  }
+}
+
+async function renderLeaderboardPanel() {
+  const leaderboard = document.getElementById("leaderboard-list");
+  const rivalryCopy = document.getElementById("rivalry-copy");
+  const count = document.getElementById("leaderboard-count");
+  const globalButton = document.getElementById("leaderboard-global");
+  const friendsButton = document.getElementById("leaderboard-friends");
+  if (!leaderboard || !rivalryCopy || !globalButton || !friendsButton) {
+    return;
+  }
+
+  const renderBoard = async (scope) => {
+    globalButton.classList.toggle("active", scope === "global");
+    friendsButton.classList.toggle("active", scope === "friends");
+    leaderboard.innerHTML = `<div class="empty-state compact">Loading leaderboard...</div>`;
+
+    try {
+      const response = await apiRequest(`/leaderboard/${scope}`);
+      const rows = response.data || [];
+      leaderboard.innerHTML = "";
+
+      if (count) {
+        count.textContent = `${rows.length} learner${rows.length === 1 ? "" : "s"}`;
+      }
+
+      if (!rows.length) {
+        rivalryCopy.textContent = "No leaderboard data available yet.";
+        leaderboard.innerHTML = `<div class="empty-state compact">No leaderboard entries available.</div>`;
+        return;
+      }
+
+      const competitors = rows.map((entry) => ({
+        user: {
+          id: entry.userId,
+          name: entry.name
+        },
+        stats: {
+          completed: entry.completedLectures,
+          progress: entry.progressPercentage,
+          streak: entry.streak
+        }
+      }));
+
+      rows.forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = `leaderboard-row${entry.userId === state.currentUser.id ? " is-current-user" : ""}`;
+        row.innerHTML = `
+          <span class="leaderboard-rank">#${entry.rank}</span>
+          <div class="leaderboard-user">
+            <strong>${entry.name}</strong>
+            <span class="muted-text">${entry.completedLectures}/${entry.totalLectures} completed - ${entry.progressPercentage}% progress</span>
+          </div>
+          <span class="leaderboard-streak">${entry.streak} day streak</span>
+        `;
+        leaderboard.appendChild(row);
+      });
+
+      rivalryCopy.textContent = getRivalryMessage(competitors);
+    } catch (error) {
+      rivalryCopy.textContent = error.message || "Unable to load leaderboard.";
+      leaderboard.innerHTML = `<div class="empty-state compact">Unable to load leaderboard right now.</div>`;
+    }
+  };
+
+  globalButton.onclick = () => {
+    void renderBoard("global");
+  };
+  friendsButton.onclick = () => {
+    void renderBoard("friends");
+  };
+
+  await renderBoard("global");
+}
+
+function getCompetitionStats(user, lectures) {
+  const userCompletions = user?.id === state.currentUser?.id ? getCurrentUserCompletions() : [];
+  const completed = userCompletions.filter((item) => item.completed).length;
+  const progress = lectures.length ? Math.round((completed / lectures.length) * 100) : 0;
+  return {
+    completed,
+    progress,
+    streak: getStreakCount(userCompletions)
+  };
+}
+
+function getRivalryMessage(competitors) {
+  if (competitors.length === 1) {
+    return "Add friends to compare completion, streaks, and overall progress.";
+  }
+
+  const currentIndex = competitors.findIndex((entry) => entry.user.id === state.currentUser.id);
+  const current = competitors[currentIndex];
+  const leader = competitors[0];
+
+  if (currentIndex === 0) {
+    const runnerUp = competitors[1];
+    const lead = current.stats.completed - runnerUp.stats.completed;
+    return `You are leading the board. Stay ahead of ${getUserDisplayName(runnerUp.user)} by ${lead || 1} lecture${lead === 1 ? "" : "s"}.`;
+  }
+
+  const gap = leader.stats.completed - current.stats.completed;
+  return `${getUserDisplayName(leader.user)} is ahead right now. Complete ${gap || 1} more lecture${gap === 1 ? "" : "s"} to catch up.`;
 }
 
 function renderStats(lectures, userCompletions) {
@@ -817,7 +1484,7 @@ function renderCalendar(lectures, subjects, actions) {
       item.className = "today-lecture-item";
       item.innerHTML = `
         <strong>${subject?.name ?? "Subject"} - ${lecture.title}</strong>
-        <span class="muted-text">${formatDate(lecture.date)} · Lecture ${lecture.lectureNumber}</span>
+        <span class="muted-text">${formatDate(lecture.date)} - Lecture ${lecture.lectureNumber}</span>
         <div class="today-lecture-actions">
           ${lectureLinkAction}
           <label class="completion-toggle">
@@ -843,34 +1510,22 @@ function renderCalendar(lectures, subjects, actions) {
 }
 
 function getCurrentUserCompletions() {
-  return getCompletions().filter((item) => item.userId === state.currentUser.id);
+  return state.currentCompletions || [];
 }
 
-function upsertCompletion(lectureId, completed) {
-  const completions = getCompletions();
-  const existingIndex = completions.findIndex(
-    (item) => item.userId === state.currentUser.id && item.lectureId === lectureId
-  );
-  const completedAt = completed ? getLocalDateKey(new Date()) : null;
-
-  if (existingIndex >= 0) {
-    completions[existingIndex] = {
-      ...completions[existingIndex],
-      completed,
-      completedAt
-    };
-  } else {
-    completions.push({
-      id: crypto.randomUUID(),
-      userId: state.currentUser.id,
-      lectureId,
-      completed,
-      completedAt
+async function upsertCompletion(lectureId, completed) {
+  try {
+    await apiRequest("/completions/toggle", {
+      method: "POST",
+      body: JSON.stringify({
+        lectureId,
+        completed
+      })
     });
+    await refreshCurrentPage();
+  } catch (error) {
+    console.error(error);
   }
-
-  writeStorage(STORAGE_KEYS.completions, completions);
-  refreshCurrentPage();
 }
 
 function getTodayCompletionCount(completions) {
@@ -949,21 +1604,36 @@ function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-function refreshCurrentPage() {
+async function refreshCurrentPage() {
   const page = document.body.dataset.page;
 
   if (page === "dashboard") {
-    initDashboardPage();
+    await initDashboardPage();
+    return;
+  }
+
+  if (page === "calendar") {
+    await initCalendarPage();
     return;
   }
 
   if (page === "subjects") {
-    initSubjectsPage();
+    await initSubjectsPage();
+    return;
+  }
+
+  if (page === "friends") {
+    await initFriendsPage();
+    return;
+  }
+
+  if (page === "leaderboard") {
+    await initLeaderboardPage();
     return;
   }
 
   if (page === "lectures") {
-    initLecturesPage();
+    await initLecturesPage();
     return;
   }
 
@@ -1055,9 +1725,9 @@ function renderMotivation(progressPercentage, todayCompletionCount) {
     copy.textContent = "Strong work. Protect your streak and close the final gaps with focused sessions.";
   }
 
-  const goalCount = Math.min(todayCompletionCount, 3);
-  goalStatus.textContent = `${goalCount} / 3 completed`;
-  goalBar.style.width = `${(goalCount / 3) * 100}%`;
+  const goalCount = Math.min(todayCompletionCount, 2);
+  goalStatus.textContent = `${goalCount} / 2 completed`;
+  goalBar.style.width = `${(goalCount / 2) * 100}%`;
 }
 
 function renderGamification(userCompletions) {
@@ -1068,7 +1738,7 @@ function renderGamification(userCompletions) {
   const completedCount = userCompletions.filter((item) => item.completed).length;
   const xp = completedCount * 10;
   const level = Math.max(1, Math.floor(xp / 100) + 1);
-  xpStatus.textContent = `${xp} XP · Level ${level}`;
+  xpStatus.textContent = `${xp} XP - Level ${level}`;
 
   const badges = [];
   if (completedCount >= 1) badges.push("First Win");
@@ -1127,6 +1797,14 @@ function getNextLecture(lectures, userCompletions, selectedSubjectId = null) {
   return candidates[0] || null;
 }
 
+function getLastViewedLecture(lectures) {
+  const lastViewedLecture = readStorage(STORAGE_KEYS.lastViewedLecture, null);
+  if (!lastViewedLecture?.lectureId) {
+    return null;
+  }
+  return lectures.find((lecture) => lecture.id === lastViewedLecture.lectureId) || null;
+}
+
 function lectureStatusLabel(lecture) {
   const today = getLocalDateKey(new Date());
   if (lecture.date === today) {
@@ -1143,16 +1821,19 @@ function bindThemeToggle() {
     button.onclick = () => {
       const current = readStorage(STORAGE_KEYS.theme, "light");
       const next = current === "dark" ? "light" : "dark";
-      writeStorage(STORAGE_KEYS.theme, next);
-      applyTheme();
+      setTheme(next);
     };
   });
   document.querySelectorAll("#theme-toggle-secondary").forEach((button) => {
     button.onclick = () => {
       const current = readStorage(STORAGE_KEYS.theme, "light");
       const next = current === "dark" ? "light" : "dark";
-      writeStorage(STORAGE_KEYS.theme, next);
-      applyTheme();
+      setTheme(next);
+    };
+  });
+  document.querySelectorAll("#theme-toggle-slider").forEach((input) => {
+    input.onchange = (event) => {
+      setTheme(event.target.checked ? "dark" : "light");
     };
   });
 }
@@ -1160,6 +1841,17 @@ function bindThemeToggle() {
 function applyTheme() {
   const theme = readStorage(STORAGE_KEYS.theme, "light");
   document.body.dataset.theme = theme;
+  document.querySelectorAll("#theme-toggle-slider").forEach((input) => {
+    input.checked = theme === "dark";
+  });
+  document.querySelectorAll("#theme-switch-label").forEach((label) => {
+    label.textContent = theme === "dark" ? "On" : "Off";
+  });
+}
+
+function setTheme(theme) {
+  writeStorage(STORAGE_KEYS.theme, theme);
+  applyTheme();
 }
 
 function bindPageTransitions() {
@@ -1357,7 +2049,8 @@ function getLecturePriority(stateName) {
 }
 
 let focusTimerInterval = null;
-let focusRemainingSeconds = 25 * 60;
+let focusRemainingSeconds = 2 * 60 * 60;
+const DEFAULT_FOCUS_SECONDS = 2 * 60 * 60;
 
 function bindFocusMode() {
   const closeButton = document.getElementById("focus-close");
@@ -1365,11 +2058,22 @@ function bindFocusMode() {
   const resetButton = document.getElementById("focus-timer-reset");
   const completeButton = document.getElementById("focus-complete");
   const notes = document.getElementById("focus-notes");
-  if (!closeButton || !toggleButton || !resetButton || !completeButton || !notes) return;
+  const hoursInput = document.getElementById("focus-hours");
+  const minutesInput = document.getElementById("focus-minutes");
+  if (!closeButton || !toggleButton || !resetButton || !completeButton || !notes || !hoursInput || !minutesInput) return;
 
   closeButton.onclick = closeFocusMode;
   toggleButton.onclick = toggleFocusTimer;
   resetButton.onclick = resetFocusTimer;
+  const syncTimerFromInputs = () => {
+    if (focusTimerInterval) {
+      return;
+    }
+    focusRemainingSeconds = getFocusInputSeconds();
+    updateFocusTimerDisplay();
+  };
+  hoursInput.oninput = syncTimerFromInputs;
+  minutesInput.oninput = syncTimerFromInputs;
   notes.oninput = () => {
     const lectureId = notes.dataset.lectureId;
     if (!lectureId) return;
@@ -1390,7 +2094,7 @@ function openFocusMode(lecture, subject) {
   if (!focus || !notes) return;
   const stored = readStorage(STORAGE_KEYS.lectureNotes, {});
   document.getElementById("focus-lecture-title").textContent = `${subject?.name ?? "Subject"} - ${lecture.title}`;
-  document.getElementById("focus-lecture-meta").textContent = `${formatDate(lecture.date)} · Lecture ${lecture.lectureNumber}`;
+  document.getElementById("focus-lecture-meta").textContent = `${formatDate(lecture.date)} - Lecture ${lecture.lectureNumber}`;
   document.getElementById("focus-open-link").href = lecture.youtubeLink || "#";
   document.getElementById("focus-complete").dataset.lectureId = lecture.id;
   notes.dataset.lectureId = lecture.id;
@@ -1417,6 +2121,8 @@ function toggleFocusTimer() {
     button.textContent = "Start Timer";
     return;
   }
+  focusRemainingSeconds = getFocusInputSeconds();
+  updateFocusTimerDisplay();
   button.textContent = "Pause Timer";
   focusTimerInterval = setInterval(() => {
     focusRemainingSeconds -= 1;
@@ -1425,7 +2131,8 @@ function toggleFocusTimer() {
       clearInterval(focusTimerInterval);
       focusTimerInterval = null;
       button.textContent = "Start Timer";
-      focusRemainingSeconds = 25 * 60;
+      focusRemainingSeconds = DEFAULT_FOCUS_SECONDS;
+      setFocusInputValues(DEFAULT_FOCUS_SECONDS);
       updateFocusTimerDisplay();
     }
   }, 1000);
@@ -1436,7 +2143,8 @@ function resetFocusTimer() {
     clearInterval(focusTimerInterval);
     focusTimerInterval = null;
   }
-  focusRemainingSeconds = 25 * 60;
+  focusRemainingSeconds = DEFAULT_FOCUS_SECONDS;
+  setFocusInputValues(DEFAULT_FOCUS_SECONDS);
   const button = document.getElementById("focus-timer-toggle");
   if (button) button.textContent = "Start Timer";
   updateFocusTimerDisplay();
@@ -1445,7 +2153,58 @@ function resetFocusTimer() {
 function updateFocusTimerDisplay() {
   const display = document.getElementById("focus-timer-display");
   if (!display) return;
-  const minutes = String(Math.floor(focusRemainingSeconds / 60)).padStart(2, "0");
+  const hours = String(Math.floor(focusRemainingSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((focusRemainingSeconds % 3600) / 60)).padStart(2, "0");
   const seconds = String(focusRemainingSeconds % 60).padStart(2, "0");
-  display.textContent = `${minutes}:${seconds}`;
+  display.textContent = `${hours}:${minutes}:${seconds}`;
+}
+
+function getFocusInputSeconds() {
+  const hoursInput = document.getElementById("focus-hours");
+  const minutesInput = document.getElementById("focus-minutes");
+  const hours = Math.max(0, Math.min(12, Number(hoursInput?.value ?? 2) || 0));
+  const minutes = Math.max(0, Math.min(59, Number(minutesInput?.value ?? 0) || 0));
+  return Math.max(60, (hours * 60 * 60) + (minutes * 60));
+}
+
+function setFocusInputValues(totalSeconds) {
+  const hoursInput = document.getElementById("focus-hours");
+  const minutesInput = document.getElementById("focus-minutes");
+  if (!hoursInput || !minutesInput) return;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  hoursInput.value = String(hours);
+  minutesInput.value = String(minutes);
+}
+
+function bindCalendarNavigation(reloadPage) {
+  const prevButton = document.getElementById("calendar-prev");
+  const nextButton = document.getElementById("calendar-next");
+  const todayButton = document.getElementById("calendar-today");
+
+  if (prevButton) {
+    prevButton.onclick = () => {
+      const currentMonth = parseMonthKey(state.calendarMonth);
+      state.calendarMonth = getMonthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+      reloadPage();
+    };
+  }
+
+  if (nextButton) {
+    nextButton.onclick = () => {
+      const currentMonth = parseMonthKey(state.calendarMonth);
+      state.calendarMonth = getMonthKey(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+      reloadPage();
+    };
+  }
+
+  if (todayButton) {
+    todayButton.onclick = () => {
+      const today = new Date();
+      state.calendarMonth = getMonthKey(today);
+      state.selectedDate = getLocalDateKey(today);
+      reloadPage();
+    };
+  }
 }
