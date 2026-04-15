@@ -1759,8 +1759,8 @@ body.is-transitioning .view {
 }
 
 .focus-mode-panel {
-  width: min(720px, calc(100vw - 56px));
-  height: min(620px, calc(100vh - 56px));
+  width: min(760px, calc(100vw - 56px));
+  height: min(640px, calc(100vh - 56px));
   padding: 16px 16px 14px;
   border-radius: 26px;
   position: relative;
@@ -1805,15 +1805,15 @@ body.is-transitioning .view {
 .focus-grid {
   align-items: stretch;
   display: grid;
-  grid-template-columns: minmax(240px, 0.94fr) minmax(0, 1.06fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
   min-height: 0;
   overflow: hidden;
 }
 
 .focus-timer-card,
 .focus-notes-card {
-  padding: 14px;
+  padding: 12px;
   border-radius: 20px;
   background: var(--panel-alt);
   border: 1px solid var(--line);
@@ -1823,14 +1823,14 @@ body.is-transitioning .view {
 }
 
 .focus-timer-card strong {
-  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
   letter-spacing: -0.05em;
 }
 
 .focus-timer-editor {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .timer-field {
@@ -1848,13 +1848,13 @@ body.is-transitioning .view {
 
 .timer-field input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid rgba(31, 41, 51, 0.12);
   background: rgba(255, 255, 255, 0.84);
   color: var(--text);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms var(--ease-spring);
 }
 
@@ -1865,18 +1865,18 @@ body.is-transitioning .view {
 }
 
 .focus-notes {
-  min-height: 96px;
-  max-height: 96px;
+  min-height: 84px;
+  max-height: 84px;
   resize: none;
 }
 
 .focus-checklist-shell {
-  max-height: 116px;
+  max-height: 104px;
   overflow: hidden;
 }
 
 .focus-history-shell {
-  max-height: 84px;
+  max-height: 76px;
   overflow: hidden;
   margin-top: 0;
 }
@@ -1890,6 +1890,55 @@ body.is-transitioning .view {
 
 body[data-theme="dark"] .focus-mode-panel > .action-card-actions:last-child {
   background: transparent;
+}
+
+.focus-timer-card .action-card-actions {
+  margin-top: 2px;
+}
+
+.focus-utility-grid {
+  margin-top: 6px !important;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.focus-utility-grid .ghost-button,
+.focus-mode-header .ghost-button,
+.focus-mode-panel > .action-card-actions:last-child > * {
+  padding: 10px 12px;
+  font-size: 0.82rem;
+}
+
+.focus-checklist-shell,
+.focus-history-shell {
+  margin-top: 8px !important;
+}
+
+.focus-checklist {
+  gap: 6px;
+}
+
+.focus-checklist-item {
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+}
+
+.focus-checklist-item span {
+  line-height: 1.2;
+}
+
+.focus-history-shell .analysis-row {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.focus-history-shell .analysis-row strong,
+.focus-history-shell .analysis-row .muted-text,
+.focus-history-shell .empty-state.compact {
+  font-size: 0.8rem;
 }
 
 body.focus-active .app-sidebar,
@@ -2783,7 +2832,7 @@ body[data-theme="dark"]::after {
 
   .focus-mode-panel {
     width: min(100%, 420px);
-    height: min(560px, calc(100vh - 32px));
+    height: min(540px, calc(100vh - 32px));
     padding: 14px;
     border-radius: 24px;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
@@ -2796,8 +2845,12 @@ body[data-theme="dark"]::after {
   }
 
   .focus-notes {
-    min-height: 88px;
-    max-height: 88px;
+    min-height: 72px;
+    max-height: 72px;
+  }
+
+  .focus-utility-grid {
+    grid-template-columns: 1fr;
   }
 
   .weekly-chart {
@@ -3260,6 +3313,67 @@ body[data-theme="dark"]::after {
   .toast {
     min-width: 0;
     max-width: none;
+  }
+}
+
+/* Final Focus Mode override so every section stays visible in one fixed window. */
+.focus-mode-panel {
+  width: min(760px, calc(100vw - 56px)) !important;
+  height: min(640px, calc(100vh - 56px)) !important;
+}
+
+.focus-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 10px !important;
+  overflow: hidden !important;
+}
+
+.focus-utility-grid {
+  margin-top: 6px !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.focus-checklist-shell,
+.focus-history-shell {
+  margin-top: 8px !important;
+}
+
+.focus-checklist {
+  gap: 6px !important;
+}
+
+.focus-checklist-item {
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  font-size: 0.88rem !important;
+}
+
+.focus-history-shell .analysis-row {
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+}
+
+.focus-history-shell .analysis-row strong,
+.focus-history-shell .analysis-row .muted-text,
+.focus-history-shell .empty-state.compact {
+  font-size: 0.8rem !important;
+}
+
+@media (max-width: 900px) {
+  .focus-mode-panel {
+    width: min(100%, 420px) !important;
+    height: min(540px, calc(100vh - 32px)) !important;
+  }
+
+  .focus-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .focus-utility-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
