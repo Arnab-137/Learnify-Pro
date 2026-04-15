@@ -1690,13 +1690,14 @@ function getRivalryMessage(competitors) {
 async function loadDashboardEnhancements(force = false) {
   const quoteText = document.getElementById("dashboard-quote-text");
   const quoteAuthor = document.getElementById("dashboard-quote-author");
+  const quoteSource = document.getElementById("dashboard-quote-source");
   const weeklyImage = document.getElementById("weekly-chart-image");
   const weeklyFallback = document.getElementById("weekly-chart-fallback");
   const subjectImage = document.getElementById("subject-chart-image");
   const subjectFallback = document.getElementById("subject-chart-fallback");
   const insightsList = document.getElementById("dashboard-insights-list");
 
-  if (!quoteText || !quoteAuthor || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
+  if (!quoteText || !quoteAuthor || !quoteSource || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
     return;
   }
 
@@ -1713,19 +1714,21 @@ async function loadDashboardEnhancements(force = false) {
 function renderDashboardEnhancements(enhancements) {
   const quoteText = document.getElementById("dashboard-quote-text");
   const quoteAuthor = document.getElementById("dashboard-quote-author");
+  const quoteSource = document.getElementById("dashboard-quote-source");
   const weeklyImage = document.getElementById("weekly-chart-image");
   const weeklyFallback = document.getElementById("weekly-chart-fallback");
   const subjectImage = document.getElementById("subject-chart-image");
   const subjectFallback = document.getElementById("subject-chart-fallback");
   const insightsList = document.getElementById("dashboard-insights-list");
 
-  if (!quoteText || !quoteAuthor || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
+  if (!quoteText || !quoteAuthor || !quoteSource || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
     return;
   }
 
   const quote = enhancements.insights?.quote;
   quoteText.textContent = quote?.content || "Stay consistent. Small wins compound into major syllabus progress.";
-  quoteAuthor.textContent = quote?.author ? `- ${quote.author}` : "- Learnify Elite";
+  quoteAuthor.textContent = quote?.author ? quote.author : "Learnify Elite";
+  quoteSource.textContent = quote?.source || "Daily Quote";
 
   applyAnalyticsImage(weeklyImage, weeklyFallback, enhancements.weekly?.chartUrl, "Weekly completion chart");
   applyAnalyticsImage(subjectImage, subjectFallback, enhancements.subjects?.chartUrl, "Subject progress chart");
