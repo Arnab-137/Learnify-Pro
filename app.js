@@ -4,7 +4,8 @@ const STORAGE_KEYS = {
   lastViewedLecture: "study-tracker-last-viewed-lecture",
   lastCelebration: "study-tracker-last-celebration",
   lectureNotes: "study-tracker-lecture-notes",
-  apiBaseUrl: "study-tracker-api-base-url"
+  apiBaseUrl: "study-tracker-api-base-url",
+  studyDataCache: "study-tracker-study-data-cache"
 };
 
 const LIVE_API_BASE_URL = "https://learnify-pro.onrender.com/api";
@@ -17,6 +18,7 @@ const DEFAULT_API_BASE_URL = (() => {
 })();
 
 const ESTIMATED_LECTURE_MINUTES = 45;
+const STUDY_DATA_CACHE_TTL = 5 * 60 * 1000;
 
 const DATA_SEED_VERSION = 6;
 
@@ -327,6 +329,43 @@ function saveSession(session) {
 
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.session);
+  clearStudyDataCache();
+}
+
+function getStudyDataCache() {
+  const cache = readStorage(STORAGE_KEYS.studyDataCache, null);
+  if (!cache?.savedAt || !cache?.userId || !cache?.data) {
+    return null;
+  }
+
+  if (Date.now() - cache.savedAt > STUDY_DATA_CACHE_TTL) {
+    localStorage.removeItem(STORAGE_KEYS.studyDataCache);
+    return null;
+  }
+
+  const currentUser = getCurrentUser();
+  if (!currentUser?.id || currentUser.id !== cache.userId) {
+    return null;
+  }
+
+  return cache.data;
+}
+
+function saveStudyDataCache(data) {
+  const currentUser = getCurrentUser();
+  if (!currentUser?.id) {
+    return;
+  }
+
+  writeStorage(STORAGE_KEYS.studyDataCache, {
+    userId: currentUser.id,
+    savedAt: Date.now(),
+    data
+  });
+}
+
+function clearStudyDataCache() {
+  localStorage.removeItem(STORAGE_KEYS.studyDataCache);
 }
 
 function getAuthToken() {
@@ -468,12 +507,24 @@ function normalizeLecture(rawLecture) {
 }
 
 async function loadStudyData(force = false) {
+  const cachedData = getStudyDataCache();
+
   if (!force && state.hasStudyData) {
     return {
       subjects: state.currentSubjects,
       lectures: state.currentLectures,
       userCompletions: state.currentCompletions
     };
+  }
+
+  if (!force) {
+    if (cachedData?.subjects && cachedData?.lectures && cachedData?.userCompletions) {
+      state.currentSubjects = cachedData.subjects;
+      state.currentLectures = cachedData.lectures;
+      state.currentCompletions = cachedData.userCompletions;
+      state.hasStudyData = true;
+      return cachedData;
+    }
   }
 
   let subjects = [];
@@ -496,25 +547,37 @@ async function loadStudyData(force = false) {
 
     lectures = bundleLectures.map(normalizeLecture);
   } catch (error) {
-    const subjectResponse = await apiRequest("/subjects");
-    const subjectRows = subjectResponse.data || [];
-    subjects = subjectRows.map((subject) => ({
-      id: subject.id || subject._id,
-      name: subject.name,
-      totalLectures: subject.totalLectures || 0,
-      completedLectures: subject.completedLectures || 0,
-      progressPercentage: subject.progressPercentage || 0,
-      lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
-      playlists: []
-    }));
+    try {
+      const subjectResponse = await apiRequest("/subjects");
+      const subjectRows = subjectResponse.data || [];
+      subjects = subjectRows.map((subject) => ({
+        id: subject.id || subject._id,
+        name: subject.name,
+        totalLectures: subject.totalLectures || 0,
+        completedLectures: subject.completedLectures || 0,
+        progressPercentage: subject.progressPercentage || 0,
+        lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
+        playlists: []
+      }));
 
-    const lectureResponses = await Promise.all(
-      subjects.map((subject) => apiRequest(`/subjects/${subject.id}/lectures`))
-    );
+      const lectureResponses = await Promise.all(
+        subjects.map((subject) => apiRequest(`/subjects/${subject.id}/lectures`))
+      );
 
-    lectures = lectureResponses.flatMap((response) =>
-      (response.data?.lectures || []).map(normalizeLecture)
-    );
+      lectures = lectureResponses.flatMap((response) =>
+        (response.data?.lectures || []).map(normalizeLecture)
+      );
+    } catch (fallbackError) {
+      if (cachedData?.subjects && cachedData?.lectures && cachedData?.userCompletions) {
+        state.currentSubjects = cachedData.subjects;
+        state.currentLectures = cachedData.lectures;
+        state.currentCompletions = cachedData.userCompletions;
+        state.hasStudyData = true;
+        return cachedData;
+      }
+
+      throw fallbackError;
+    }
   }
 
   subjects.forEach((subject) => {
@@ -534,11 +597,13 @@ async function loadStudyData(force = false) {
   state.currentCompletions = completions;
   state.hasStudyData = true;
 
-  return {
+  const data = {
     subjects,
     lectures,
     userCompletions: completions
   };
+  saveStudyDataCache(data);
+  return data;
 }
 
 async function initAuthPage() {
