@@ -5,7 +5,16 @@ const STORAGE_KEYS = {
   lastCelebration: "study-tracker-last-celebration",
   lectureNotes: "study-tracker-lecture-notes",
   apiBaseUrl: "study-tracker-api-base-url",
-  studyDataCache: "study-tracker-study-data-cache"
+  studyDataCache: "study-tracker-study-data-cache",
+  analyticsCache: "study-tracker-analytics-cache",
+  plannerConfig: "study-tracker-planner-config",
+  plannerSchedule: "study-tracker-planner-schedule",
+  lectureMeta: "study-tracker-lecture-meta",
+  subjectNotes: "study-tracker-subject-notes",
+  focusChecklist: "study-tracker-focus-checklist",
+  focusSessions: "study-tracker-focus-sessions",
+  adminApiKey: "study-tracker-admin-api-key",
+  queuedToasts: "study-tracker-queued-toasts"
 };
 
 const LIVE_API_BASE_URL = "https://learnify-pro.onrender.com/api";
@@ -19,8 +28,33 @@ const DEFAULT_API_BASE_URL = (() => {
 
 const ESTIMATED_LECTURE_MINUTES = 45;
 const STUDY_DATA_CACHE_TTL = 5 * 60 * 1000;
+const ANALYTICS_CACHE_TTL = 10 * 60 * 1000;
+const DEFAULT_DAILY_GOAL = 2;
+const DEFAULT_WEEKLY_CHALLENGE = 5;
+const DEFAULT_BREAK_SECONDS = 10 * 60;
 
 const DATA_SEED_VERSION = 6;
+
+const NAV_ITEMS = [
+  { key: "dashboard", label: "Dashboard", href: "dashboard.html" },
+  { key: "insights", label: "Insights", href: "insights.html" },
+  { key: "planner", label: "Planner", href: "planner.html" },
+  { key: "subjects", label: "Subjects", href: "subjects.html" },
+  { key: "lectures", label: "Lectures", href: "lectures.html" },
+  { key: "focus", label: "Focus Mode", href: "lectures.html?focus=1" },
+  { key: "friends", label: "Friends", href: "friends.html" },
+  { key: "leaderboard", label: "Leaderboard", href: "leaderboard.html" },
+  { key: "admin", label: "Admin", href: "admin.html" },
+  { key: "settings", label: "Settings", href: "settings.html" }
+];
+
+const MOBILE_NAV_ITEMS = [
+  { key: "dashboard", label: "Dashboard", href: "dashboard.html" },
+  { key: "insights", label: "Insights", href: "insights.html" },
+  { key: "planner", label: "Planner", href: "planner.html" },
+  { key: "lectures", label: "Lectures", href: "lectures.html" },
+  { key: "friends", label: "Friends", href: "friends.html" }
+];
 
 const seedSubjects = [
   {
@@ -232,10 +266,13 @@ const state = {
   currentCompletions: [],
   hasStudyData: false,
   reactInsightsRequested: false,
-  dashboardEnhancements: null
+  dashboardEnhancements: null,
+  analyticsSnapshot: null,
+  installPromptEvent: null
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  initializeSharedExperience();
   const page = document.body.dataset.page;
 
   if (page === "auth") {
@@ -266,6 +303,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  if (page === "insights") {
+    await initInsightsPage();
+    return;
+  }
+
+  if (page === "planner") {
+    await initPlannerPage();
+    return;
+  }
+
   if (page === "calendar") {
     await initCalendarPage();
     return;
@@ -293,6 +340,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (page === "settings") {
     initSettingsPage();
+    return;
+  }
+
+  if (page === "admin") {
+    await initAdminPage();
   }
 });
 
@@ -333,7 +385,9 @@ function saveSession(session) {
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.session);
   clearStudyDataCache();
+  localStorage.removeItem(STORAGE_KEYS.analyticsCache);
   state.dashboardEnhancements = null;
+  state.analyticsSnapshot = null;
 }
 
 function getSessionUser() {
@@ -375,6 +429,38 @@ function saveStudyDataCache(data) {
 
 function clearStudyDataCache() {
   localStorage.removeItem(STORAGE_KEYS.studyDataCache);
+  state.hasStudyData = false;
+}
+
+function getAnalyticsCache() {
+  const cache = readStorage(STORAGE_KEYS.analyticsCache, null);
+  if (!cache?.savedAt || !cache?.data) {
+    return null;
+  }
+  if (Date.now() - cache.savedAt > ANALYTICS_CACHE_TTL) {
+    localStorage.removeItem(STORAGE_KEYS.analyticsCache);
+    return null;
+  }
+  return cache.data;
+}
+
+function saveAnalyticsCache(data) {
+  writeStorage(STORAGE_KEYS.analyticsCache, {
+    savedAt: Date.now(),
+    data
+  });
+}
+
+function queueToast(message, tone = "info") {
+  const queue = readStorage(STORAGE_KEYS.queuedToasts, []);
+  queue.push({ id: Date.now(), message, tone });
+  writeStorage(STORAGE_KEYS.queuedToasts, queue.slice(-6));
+}
+
+function popQueuedToasts() {
+  const queue = readStorage(STORAGE_KEYS.queuedToasts, []);
+  localStorage.removeItem(STORAGE_KEYS.queuedToasts);
+  return queue;
 }
 
 function getAuthToken() {
@@ -385,6 +471,13 @@ function wait(milliseconds) {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
+}
+
+function initializeSharedExperience() {
+  ensureToastHost();
+  bindInstallPromptUi();
+  registerServiceWorker();
+  showQueuedToasts();
 }
 
 async function apiRequest(path, options = {}) {
@@ -763,35 +856,26 @@ function renderAppFrame() {
   }
 
   const page = document.body.dataset.page;
-  const navDashboard = document.getElementById("nav-dashboard");
-  const navSubjects = document.getElementById("nav-subjects");
-  const navLectures = document.getElementById("nav-lectures");
-  const navFocus = document.getElementById("nav-focus");
-  const navFriends = document.getElementById("nav-friends");
-  const navLeaderboard = document.getElementById("nav-leaderboard");
-  const navSettings = document.getElementById("nav-settings");
   const focusModeRequested = getQueryParam("focus") === "1";
+  const desktopNav = document.querySelector(".app-nav");
+  const mobileNav = document.querySelector(".mobile-nav");
 
-  if (navDashboard) {
-    navDashboard.classList.toggle("active", page === "dashboard");
+  if (desktopNav) {
+    desktopNav.innerHTML = NAV_ITEMS.map((item) => {
+      const isActive = item.key === "focus"
+        ? page === "lectures" && focusModeRequested
+        : item.key === "lectures"
+          ? page === "lectures" && !focusModeRequested
+          : page === item.key;
+      return `<a class="app-link${isActive ? " active" : ""}" href="${item.href}">${item.label}</a>`;
+    }).join("");
   }
-  if (navSubjects) {
-    navSubjects.classList.toggle("active", page === "subjects");
-  }
-  if (navLectures) {
-    navLectures.classList.toggle("active", page === "lectures" && !focusModeRequested);
-  }
-  if (navFocus) {
-    navFocus.classList.toggle("active", page === "lectures" && focusModeRequested);
-  }
-  if (navFriends) {
-    navFriends.classList.toggle("active", page === "friends");
-  }
-  if (navLeaderboard) {
-    navLeaderboard.classList.toggle("active", page === "leaderboard");
-  }
-  if (navSettings) {
-    navSettings.classList.toggle("active", page === "settings");
+
+  if (mobileNav) {
+    mobileNav.innerHTML = MOBILE_NAV_ITEMS.map((item) => {
+      const isActive = page === item.key || (item.key === "lectures" && page === "lectures");
+      return `<a class="app-link${isActive ? " active" : ""}" href="${item.href}">${item.label}</a>`;
+    }).join("");
   }
 
   const logoutButton = document.getElementById("logout-button");
@@ -807,6 +891,7 @@ async function initDashboardPage(force = false) {
   renderStats(lectures, userCompletions);
   renderNextAction(lectures, subjects, userCompletions);
   publishDashboardInsights(lectures, subjects, userCompletions);
+  maybeShowSmartNotifications(lectures, userCompletions);
   renderCalendar(lectures, subjects, {
     onDateSelect: (date) => {
       state.selectedDate = date;
@@ -819,6 +904,17 @@ async function initDashboardPage(force = false) {
   bindCalendarNavigation(initDashboardPage);
   loadReactInsightsWidget();
   void loadDashboardEnhancements(force);
+}
+
+async function initInsightsPage(force = false) {
+  const { lectures, subjects, userCompletions } = await loadStudyData(force);
+  const enhancements = await getAnalyticsSnapshot(force);
+  renderInsightsPage(lectures, subjects, userCompletions, enhancements);
+}
+
+async function initPlannerPage(force = false) {
+  const { lectures, subjects, userCompletions } = await loadStudyData(force);
+  renderPlannerPage(lectures, subjects, userCompletions);
 }
 
 async function initCalendarPage(force = false) {
@@ -840,9 +936,11 @@ async function initCalendarPage(force = false) {
 async function initSubjectsPage(force = false) {
   const { lectures, subjects, userCompletions } = await loadStudyData(force);
   renderSubjects(subjects, lectures, userCompletions, true);
+  renderSubjectNotes(subjects);
 }
 
 async function initFriendsPage() {
+  await loadStudyData();
   await renderFriendsPanel();
 }
 
@@ -858,6 +956,9 @@ async function initLecturesPage(force = false) {
 
   renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
   renderResumeBanner(lectures, subjects);
+  maybeShowSmartNotifications(lectures, userCompletions);
+  renderOverdueRecovery(lectures, subjects, userCompletions);
+  renderPlanStatusCard(lectures, userCompletions);
   bindLectureFilters(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
   bindFocusMode();
   bindKeyboardShortcuts(lectures, userCompletions, selectedSubjectId);
@@ -880,6 +981,11 @@ async function initLecturesPage(force = false) {
   }
 }
 
+async function initAdminPage() {
+  const { subjects } = await loadStudyData();
+  renderAdminPage(subjects);
+}
+
 function initSettingsPage() {
   applyTheme();
   const apiInput = document.getElementById("api-base-url");
@@ -895,7 +1001,34 @@ function initSettingsPage() {
     apiButton.onclick = () => {
       saveApiBaseUrl(apiInput.value);
       apiStatus.textContent = `Current API endpoint: ${getApiBaseUrl()}`;
+      queueToast("Backend connection updated.", "success");
     };
+  }
+
+  const notificationButton = document.getElementById("test-notification-button");
+  if (notificationButton) {
+    notificationButton.onclick = () => {
+      showToast("Daily reminder: protect one focused lecture block today.", "info");
+    };
+  }
+
+  const installButton = document.getElementById("install-app-button");
+  const installStatus = document.getElementById("install-app-status");
+  if (installButton && state.installPromptEvent) {
+    installButton.classList.remove("hidden");
+    installButton.onclick = async () => {
+      state.installPromptEvent?.prompt();
+      const choice = await state.installPromptEvent?.userChoice;
+      if (choice?.outcome === "accepted") {
+        showToast("Learnify Elite is being installed.", "success");
+        installButton.classList.add("hidden");
+      }
+    };
+  }
+  if (installStatus) {
+    installStatus.textContent = state.installPromptEvent
+      ? "Install is available on this device."
+      : "If install is supported, the button will appear when the browser offers it.";
   }
 }
 
@@ -1165,6 +1298,10 @@ async function renderFriendsPanel() {
       friendsCount.textContent = `${friends.length} friend${friends.length === 1 ? "" : "s"}`;
     }
 
+    renderWeeklyWinnerCard(friends);
+    renderWeeklyChallengeCard();
+    renderFriendActivityFeed(friends);
+
     renderFriendCards(
       friendsList,
       friends,
@@ -1193,6 +1330,7 @@ async function renderFriendsPanel() {
         `;
         card.querySelector(".accept-request").onclick = async () => {
           await apiRequest(`/friends/accept/${friend.id}`, { method: "POST" });
+          showToast(`You accepted ${friend.name}'s request.`, "success");
           await loadFriendsData();
         };
         card.querySelector(".reject-request").onclick = async () => {
@@ -1278,6 +1416,7 @@ async function renderFriendsPanel() {
           actionButton.classList.remove("ghost-button");
           actionButton.onclick = async () => {
             await apiRequest(`/friends/request/${result.id}`, { method: "POST" });
+            showToast(`Friend request sent to ${result.name}.`, "success");
             await loadFriendsData();
             await runSearch();
           };
@@ -1286,6 +1425,7 @@ async function renderFriendsPanel() {
         if (result.requestReceived) {
           actionButton.onclick = async () => {
             await apiRequest(`/friends/accept/${result.id}`, { method: "POST" });
+            showToast(`You are now connected with ${result.name}.`, "success");
             await loadFriendsData();
             await runSearch();
           };
@@ -1387,6 +1527,8 @@ async function renderLeaderboardPanel() {
       });
 
       rivalryCopy.textContent = getRivalryMessage(competitors);
+      const { lectures, subjects, userCompletions } = await loadStudyData();
+      renderLeaderboardSubjectComparison(lectures, subjects, userCompletions);
     } catch (error) {
       rivalryCopy.textContent = error.message || "Unable to load leaderboard.";
       leaderboard.innerHTML = `<div class="empty-state compact">Unable to load leaderboard right now.</div>`;
@@ -1451,18 +1593,7 @@ async function loadDashboardEnhancements(force = false) {
     return;
   }
 
-  const requests = await Promise.allSettled([
-    apiRequest("/analytics/weekly"),
-    apiRequest("/analytics/subjects"),
-    apiRequest("/analytics/insights")
-  ]);
-
-  const enhancements = {
-    weekly: requests[0].status === "fulfilled" ? requests[0].value.data || null : null,
-    subjects: requests[1].status === "fulfilled" ? requests[1].value.data || null : null,
-    insights: requests[2].status === "fulfilled" ? requests[2].value.data || null : null
-  };
-
+  const enhancements = await getAnalyticsSnapshot(force);
   state.dashboardEnhancements = enhancements;
   renderDashboardEnhancements(enhancements);
 }
@@ -1482,7 +1613,7 @@ function renderDashboardEnhancements(enhancements) {
 
   const quote = enhancements.insights?.quote;
   quoteText.textContent = quote?.content || "Stay consistent. Small wins compound into major syllabus progress.";
-  quoteAuthor.textContent = quote?.author ? `— ${quote.author}` : "— Learnify Elite";
+  quoteAuthor.textContent = quote?.author ? `- ${quote.author}` : "- Learnify Elite";
 
   applyAnalyticsImage(weeklyImage, weeklyFallback, enhancements.weekly?.chartUrl, "Weekly completion chart");
   applyAnalyticsImage(subjectImage, subjectFallback, enhancements.subjects?.chartUrl, "Subject progress chart");
@@ -1614,6 +1745,8 @@ function renderLectures(lectures, subjects, userCompletions, selectedSubjectId, 
   const baseLectures = selectedDate ? selectedDateLectures : lectures;
   const searchValue = (document.getElementById("lecture-search")?.value || "").trim().toLowerCase();
   const statusFilter = document.getElementById("lecture-status-filter")?.value || "all";
+  const subjectFilter = document.getElementById("lecture-subject-filter")?.value || "all";
+  const sortBy = document.getElementById("lecture-sort")?.value || "date";
   const filteredLectures = selectedSubjectId
     ? baseLectures.filter((lecture) => lecture.subjectId === selectedSubjectId)
     : baseLectures;
@@ -1633,8 +1766,11 @@ function renderLectures(lectures, subjects, userCompletions, selectedSubjectId, 
     .filter((item) => {
       const matchesSearch = !searchValue || item.lecture.title.toLowerCase().includes(searchValue) || item.subject?.name.toLowerCase().includes(searchValue);
       const matchesStatus = statusFilter === "all" || item.stateName === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesSubject = subjectFilter === "all" || item.lecture.subjectId === subjectFilter;
+      return matchesSearch && matchesStatus && matchesSubject;
     });
+
+  populateLectureSubjectFilter(subjects, selectedSubjectId);
 
   list.innerHTML = "";
   if (selectedSubject && selectedDate) {
@@ -1672,7 +1808,7 @@ function renderLectures(lectures, subjects, userCompletions, selectedSubjectId, 
     `;
     const groupList = section.querySelector(".lecture-group-list");
     group.items
-      .sort((a, b) => a.lecture.date.localeCompare(b.lecture.date) || a.lecture.lectureNumber - b.lecture.lectureNumber)
+      .sort((a, b) => compareLectures(a, b, sortBy))
       .forEach((item) => {
         groupList.appendChild(createLectureCard(item, todayKey));
       });
@@ -1682,6 +1818,8 @@ function renderLectures(lectures, subjects, userCompletions, selectedSubjectId, 
 
 function createLectureCard(item, todayKey) {
   const { lecture, subject, isCompleted, stateName, priority } = item;
+  const lectureMeta = getLectureMeta(lecture.id);
+  const lectureNote = getLectureNoteValue(lecture.id);
   const lectureLinkAction = lecture.youtubeLink
     ? `<a class="playlist-link" href="${lecture.youtubeLink}" target="_blank" rel="noreferrer">Open Link</a>`
     : "";
@@ -1700,6 +1838,7 @@ function createLectureCard(item, todayKey) {
         <span>${formatDate(lecture.date)}</span>
         <span>Lecture ${lecture.lectureNumber}</span>
         <span class="status-pill priority-pill">${priority.toUpperCase()}</span>
+        ${lectureMeta.revisionStatus ? `<span class="status-pill revision-pill">${formatRevisionLabel(lectureMeta.revisionStatus)}</span>` : ""}
       </div>
     </div>
     <div class="lecture-actions">
@@ -1710,6 +1849,22 @@ function createLectureCard(item, todayKey) {
         <span>Completed</span>
       </label>
     </div>
+    <div class="lecture-support-row">
+      <button class="bookmark-toggle${lectureMeta.starred ? " active" : ""}" type="button">${lectureMeta.starred ? "★" : "☆"} Bookmark</button>
+      <label class="inline-select-shell">
+        <span>Revision</span>
+        <select class="revision-select">
+          <option value="">None</option>
+          <option value="revise-later" ${lectureMeta.revisionStatus === "revise-later" ? "selected" : ""}>Revise later</option>
+          <option value="important" ${lectureMeta.revisionStatus === "important" ? "selected" : ""}>Important</option>
+          <option value="weak-area" ${lectureMeta.revisionStatus === "weak-area" ? "selected" : ""}>Weak area</option>
+        </select>
+      </label>
+    </div>
+    <label class="lecture-note-shell">
+      <span>Quick note</span>
+      <textarea class="lecture-inline-note" placeholder="Add a quick lecture note...">${escapeHtml(lectureNote)}</textarea>
+    </label>
   `;
 
   const checkbox = card.querySelector("input[type='checkbox']");
@@ -1718,8 +1873,22 @@ function createLectureCard(item, todayKey) {
     upsertCompletion(lecture.id, event.target.checked);
   });
   card.querySelector(".focus-launch").addEventListener("click", () => openFocusMode(lecture, subject));
+  card.querySelector(".bookmark-toggle")?.addEventListener("click", () => {
+    const nextValue = !getLectureMeta(lecture.id).starred;
+    setLectureMetaField(lecture.id, "starred", nextValue);
+    showToast(nextValue ? "Lecture bookmarked for revision." : "Lecture bookmark removed.", "success");
+    void refreshCurrentPage();
+  });
+  card.querySelector(".revision-select")?.addEventListener("change", (event) => {
+    setLectureMetaField(lecture.id, "revisionStatus", event.target.value);
+    showToast(event.target.value ? `Marked as ${formatRevisionLabel(event.target.value).toLowerCase()}.` : "Revision tag cleared.", "info");
+    void refreshCurrentPage();
+  });
+  card.querySelector(".lecture-inline-note")?.addEventListener("input", (event) => {
+    setLectureNoteValue(lecture.id, event.target.value);
+  });
   card.addEventListener("click", (event) => {
-    if (event.target.closest("a") || event.target.closest("label") || event.target.closest("input") || event.target.closest("button")) {
+    if (event.target.closest("a") || event.target.closest("label") || event.target.closest("input") || event.target.closest("button") || event.target.closest("textarea") || event.target.closest("select")) {
       return;
     }
     writeStorage(STORAGE_KEYS.lastViewedLecture, {
@@ -1890,6 +2059,34 @@ function getCurrentUserCompletions() {
 }
 
 async function upsertCompletion(lectureId, completed) {
+  const previousCompletions = [...state.currentCompletions];
+  const todayKey = getLocalDateKey(new Date());
+  const existingIndex = state.currentCompletions.findIndex((item) => item.lectureId === lectureId);
+  const nextCompletions = [...state.currentCompletions];
+
+  if (existingIndex >= 0) {
+    nextCompletions[existingIndex] = {
+      ...nextCompletions[existingIndex],
+      completed,
+      completedAt: completed ? todayKey : null
+    };
+  } else {
+    nextCompletions.push({
+      lectureId,
+      completed,
+      completedAt: completed ? todayKey : null
+    });
+  }
+
+  state.currentCompletions = nextCompletions;
+  saveStudyDataCache({
+    subjects: state.currentSubjects,
+    lectures: state.currentLectures,
+    userCompletions: nextCompletions
+  });
+  showToast(completed ? "Lecture marked complete." : "Lecture moved back to pending.", "success");
+  await refreshCurrentPage(false);
+
   try {
     await apiRequest("/completions/toggle", {
       method: "POST",
@@ -1898,9 +2095,17 @@ async function upsertCompletion(lectureId, completed) {
         completed
       })
     });
-    await refreshCurrentPage(true);
+    maybeSuggestPlanRecovery();
   } catch (error) {
     console.error(error);
+    state.currentCompletions = previousCompletions;
+    saveStudyDataCache({
+      subjects: state.currentSubjects,
+      lectures: state.currentLectures,
+      userCompletions: previousCompletions
+    });
+    showToast(error.message || "Unable to update completion right now.", "danger");
+    await refreshCurrentPage(false);
   }
 }
 
@@ -1988,6 +2193,16 @@ async function refreshCurrentPage(force = false) {
     return;
   }
 
+  if (page === "insights") {
+    await initInsightsPage(force);
+    return;
+  }
+
+  if (page === "planner") {
+    await initPlannerPage(force);
+    return;
+  }
+
   if (page === "calendar") {
     await initCalendarPage(force);
     return;
@@ -2015,6 +2230,11 @@ async function refreshCurrentPage(force = false) {
 
   if (page === "settings") {
     initSettingsPage();
+    return;
+  }
+
+  if (page === "admin") {
+    await initAdminPage();
   }
 }
 
@@ -2114,12 +2334,14 @@ function renderGamification(userCompletions) {
   const completedCount = userCompletions.filter((item) => item.completed).length;
   const xp = completedCount * 10;
   const level = Math.max(1, Math.floor(xp / 100) + 1);
-  xpStatus.textContent = `${xp} XP - Level ${level}`;
+  const consistency = Math.min(Math.round((getWeeklyCompletionCount(userCompletions) / DEFAULT_WEEKLY_CHALLENGE) * 100), 100);
+  xpStatus.textContent = `${xp} XP - Level ${level} - Consistency ${consistency}%`;
 
   const badges = [];
   if (completedCount >= 1) badges.push("First Win");
   if (getStreakCount(userCompletions) >= 3) badges.push("3-Day Streak");
   if (completedCount >= 10) badges.push("10 Lectures");
+  if (consistency >= 100) badges.push("Consistency Ace");
   if (!badges.length) badges.push("Getting Started");
 
   badgeContainer.innerHTML = "";
@@ -2358,11 +2580,19 @@ function renderHeatmap(userCompletions) {
 function bindLectureFilters(lectures, subjects, userCompletions, selectedSubjectId, selectedDate) {
   const search = document.getElementById("lecture-search");
   const filter = document.getElementById("lecture-status-filter");
+  const subjectFilter = document.getElementById("lecture-subject-filter");
+  const sortSelect = document.getElementById("lecture-sort");
   if (search) {
     search.oninput = () => renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
   }
   if (filter) {
     filter.onchange = () => renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
+  }
+  if (subjectFilter) {
+    subjectFilter.onchange = () => renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
+  }
+  if (sortSelect) {
+    sortSelect.onchange = () => renderLectures(lectures, subjects, userCompletions, selectedSubjectId, selectedDate);
   }
 }
 
@@ -2427,6 +2657,10 @@ function getLecturePriority(stateName) {
 let focusTimerInterval = null;
 let focusRemainingSeconds = 2 * 60 * 60;
 const DEFAULT_FOCUS_SECONDS = 2 * 60 * 60;
+let focusAudioContext = null;
+let focusNoiseNode = null;
+let focusNoiseGain = null;
+let focusBreakMode = false;
 
 function bindFocusMode() {
   const closeButton = document.getElementById("focus-close");
@@ -2436,11 +2670,23 @@ function bindFocusMode() {
   const notes = document.getElementById("focus-notes");
   const hoursInput = document.getElementById("focus-hours");
   const minutesInput = document.getElementById("focus-minutes");
+  const breakButton = document.getElementById("focus-break-toggle");
+  const fullscreenButton = document.getElementById("focus-fullscreen");
+  const ambientButton = document.getElementById("focus-ambient-toggle");
   if (!closeButton || !toggleButton || !resetButton || !completeButton || !notes || !hoursInput || !minutesInput) return;
 
   closeButton.onclick = closeFocusMode;
   toggleButton.onclick = toggleFocusTimer;
   resetButton.onclick = resetFocusTimer;
+  if (breakButton) {
+    breakButton.onclick = toggleBreakMode;
+  }
+  if (fullscreenButton) {
+    fullscreenButton.onclick = toggleFocusFullscreen;
+  }
+  if (ambientButton) {
+    ambientButton.onclick = toggleAmbientSound;
+  }
   const syncTimerFromInputs = () => {
     if (focusTimerInterval) {
       return;
@@ -2453,13 +2699,12 @@ function bindFocusMode() {
   notes.oninput = () => {
     const lectureId = notes.dataset.lectureId;
     if (!lectureId) return;
-    const stored = readStorage(STORAGE_KEYS.lectureNotes, {});
-    stored[lectureId] = notes.value;
-    writeStorage(STORAGE_KEYS.lectureNotes, stored);
+    setLectureNoteValue(lectureId, notes.value);
   };
   completeButton.onclick = () => {
     const lectureId = completeButton.dataset.lectureId;
     if (lectureId) upsertCompletion(lectureId, true);
+    storeFocusSession(lectureId);
     closeFocusMode();
   };
 }
@@ -2469,12 +2714,15 @@ function openFocusMode(lecture, subject) {
   const notes = document.getElementById("focus-notes");
   if (!focus || !notes) return;
   const stored = readStorage(STORAGE_KEYS.lectureNotes, {});
+  focusBreakMode = false;
   document.getElementById("focus-lecture-title").textContent = `${subject?.name ?? "Subject"} - ${lecture.title}`;
   document.getElementById("focus-lecture-meta").textContent = `${formatDate(lecture.date)} - Lecture ${lecture.lectureNumber}`;
   document.getElementById("focus-open-link").href = lecture.youtubeLink || "#";
   document.getElementById("focus-complete").dataset.lectureId = lecture.id;
   notes.dataset.lectureId = lecture.id;
   notes.value = stored[lecture.id] || "";
+  renderFocusChecklist(lecture.id);
+  renderFocusHistory();
   focus.classList.remove("hidden");
   document.body.classList.add("focus-active");
   writeStorage(STORAGE_KEYS.lastViewedLecture, { lectureId: lecture.id, subjectId: lecture.subjectId, date: lecture.date });
@@ -2486,6 +2734,7 @@ function closeFocusMode() {
   if (!focus) return;
   focus.classList.add("hidden");
   document.body.classList.remove("focus-active");
+  stopAmbientSound();
 }
 
 function toggleFocusTimer() {
@@ -2499,6 +2748,7 @@ function toggleFocusTimer() {
   }
   focusRemainingSeconds = getFocusInputSeconds();
   updateFocusTimerDisplay();
+  focusBreakMode = false;
   button.textContent = "Pause Timer";
   focusTimerInterval = setInterval(() => {
     focusRemainingSeconds -= 1;
@@ -2510,6 +2760,8 @@ function toggleFocusTimer() {
       focusRemainingSeconds = DEFAULT_FOCUS_SECONDS;
       setFocusInputValues(DEFAULT_FOCUS_SECONDS);
       updateFocusTimerDisplay();
+      showToast(focusBreakMode ? "Break finished. Return to your lecture." : "Focus block complete. Log your notes before switching context.", "success");
+      focusBreakMode = false;
     }
   }, 1000);
 }
@@ -2519,10 +2771,13 @@ function resetFocusTimer() {
     clearInterval(focusTimerInterval);
     focusTimerInterval = null;
   }
+  focusBreakMode = false;
   focusRemainingSeconds = DEFAULT_FOCUS_SECONDS;
   setFocusInputValues(DEFAULT_FOCUS_SECONDS);
   const button = document.getElementById("focus-timer-toggle");
   if (button) button.textContent = "Start Timer";
+  const breakButton = document.getElementById("focus-break-toggle");
+  if (breakButton) breakButton.textContent = "Start 10 min break";
   updateFocusTimerDisplay();
 }
 
@@ -2583,5 +2838,998 @@ function bindCalendarNavigation(reloadPage) {
       reloadPage();
     };
   }
+}
+
+function getLectureMetaMap() {
+  return readStorage(STORAGE_KEYS.lectureMeta, {});
+}
+
+function getLectureMeta(lectureId) {
+  return getLectureMetaMap()[lectureId] || {
+    starred: false,
+    revisionStatus: ""
+  };
+}
+
+function setLectureMetaField(lectureId, field, value) {
+  const metaMap = getLectureMetaMap();
+  metaMap[lectureId] = {
+    ...getLectureMeta(lectureId),
+    [field]: value
+  };
+  writeStorage(STORAGE_KEYS.lectureMeta, metaMap);
+}
+
+function getLectureNoteValue(lectureId) {
+  const stored = readStorage(STORAGE_KEYS.lectureNotes, {});
+  return stored[lectureId] || "";
+}
+
+function setLectureNoteValue(lectureId, value) {
+  const stored = readStorage(STORAGE_KEYS.lectureNotes, {});
+  stored[lectureId] = value;
+  writeStorage(STORAGE_KEYS.lectureNotes, stored);
+}
+
+function formatRevisionLabel(value) {
+  if (value === "revise-later") return "Revise later";
+  if (value === "important") return "Important";
+  if (value === "weak-area") return "Weak area";
+  return "None";
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function populateLectureSubjectFilter(subjects, selectedSubjectId) {
+  const subjectFilter = document.getElementById("lecture-subject-filter");
+  if (!subjectFilter || selectedSubjectId) {
+    return;
+  }
+
+  const currentValue = subjectFilter.value || "all";
+  subjectFilter.innerHTML = `<option value="all">All subjects</option>${subjects
+    .map((subject) => `<option value="${subject.id}">${subject.name}</option>`)
+    .join("")}`;
+  subjectFilter.value = currentValue;
+}
+
+function compareLectures(a, b, sortBy) {
+  if (sortBy === "number") {
+    return a.lecture.lectureNumber - b.lecture.lectureNumber || a.lecture.date.localeCompare(b.lecture.date);
+  }
+  if (sortBy === "priority") {
+    const priorityRank = { high: 0, medium: 1, low: 2 };
+    return (priorityRank[a.priority] ?? 2) - (priorityRank[b.priority] ?? 2)
+      || a.lecture.date.localeCompare(b.lecture.date)
+      || a.lecture.lectureNumber - b.lecture.lectureNumber;
+  }
+  return a.lecture.date.localeCompare(b.lecture.date) || a.lecture.lectureNumber - b.lecture.lectureNumber;
+}
+
+function getPlannerConfig() {
+  return readStorage(STORAGE_KEYS.plannerConfig, {
+    examName: "",
+    examDate: "",
+    dailyGoal: DEFAULT_DAILY_GOAL,
+    weekdaysOnly: false
+  });
+}
+
+function savePlannerConfig(config) {
+  writeStorage(STORAGE_KEYS.plannerConfig, config);
+}
+
+function savePlannerSchedule(schedule) {
+  writeStorage(STORAGE_KEYS.plannerSchedule, schedule);
+}
+
+function getPlannerSchedule() {
+  return readStorage(STORAGE_KEYS.plannerSchedule, []);
+}
+
+function buildStudyPlan(lectures, userCompletions, config) {
+  const completedLectureIds = new Set(
+    userCompletions.filter((item) => item.completed).map((item) => item.lectureId)
+  );
+  const pendingLectures = lectures
+    .filter((lecture) => !completedLectureIds.has(lecture.id))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.lectureNumber - b.lectureNumber);
+
+  if (!config.examDate || !pendingLectures.length) {
+    return {
+      plan: [],
+      pendingLectures,
+      behindCount: 0,
+      readinessScore: completedLectureIds.size ? Math.round((completedLectureIds.size / lectures.length) * 100) : 0
+    };
+  }
+
+  const plan = [];
+  const cursor = parseDateString(getLocalDateKey(new Date()));
+  let lectureIndex = 0;
+  const examDate = parseDateString(config.examDate);
+  const todayKey = getLocalDateKey(cursor);
+
+  while (cursor <= examDate && lectureIndex < pendingLectures.length) {
+    const dayOfWeek = cursor.getDay();
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    if (!config.weekdaysOnly || isWeekday) {
+      const dateKey = getLocalDateKey(cursor);
+      const lecturesForDay = pendingLectures.slice(lectureIndex, lectureIndex + Number(config.dailyGoal || DEFAULT_DAILY_GOAL));
+      lectureIndex += lecturesForDay.length;
+      if (lecturesForDay.length) {
+        plan.push({
+          date: dateKey,
+          lectures: lecturesForDay,
+          isOverdueDay: dateKey < todayKey
+        });
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const assignedLectureIds = new Set(plan.flatMap((entry) => entry.lectures.map((lecture) => lecture.id)));
+  const unplanned = pendingLectures.filter((lecture) => !assignedLectureIds.has(lecture.id));
+  if (unplanned.length) {
+    plan.push({
+      date: config.examDate,
+      lectures: unplanned,
+      isOverdueDay: false,
+      overflow: true
+    });
+  }
+
+  const behindCount = plan
+    .filter((entry) => entry.date < todayKey)
+    .reduce((total, entry) => total + entry.lectures.length, 0);
+  const readinessScore = lectures.length ? Math.round(((lectures.length - pendingLectures.length) / lectures.length) * 100) : 0;
+
+  return {
+    plan,
+    pendingLectures,
+    behindCount,
+    readinessScore
+  };
+}
+
+function renderPlannerPage(lectures, subjects, userCompletions) {
+  const examNameInput = document.getElementById("planner-exam-name");
+  const examDateInput = document.getElementById("planner-exam-date");
+  const dailyGoalInput = document.getElementById("planner-daily-goal");
+  const weekdaysInput = document.getElementById("planner-weekdays-only");
+  const generateButton = document.getElementById("planner-generate");
+  const clearButton = document.getElementById("planner-clear");
+  const status = document.getElementById("planner-status");
+  const scheduleList = document.getElementById("planner-schedule-list");
+  const config = getPlannerConfig();
+
+  if (!examNameInput || !examDateInput || !dailyGoalInput || !weekdaysInput || !generateButton || !clearButton || !status || !scheduleList) {
+    return;
+  }
+
+  examNameInput.value = config.examName || "";
+  examDateInput.value = config.examDate || "";
+  dailyGoalInput.value = String(config.dailyGoal || DEFAULT_DAILY_GOAL);
+  weekdaysInput.checked = Boolean(config.weekdaysOnly);
+
+  const renderCurrentPlan = () => {
+    const nextConfig = {
+      examName: examNameInput.value.trim(),
+      examDate: examDateInput.value,
+      dailyGoal: Math.max(1, Number(dailyGoalInput.value || DEFAULT_DAILY_GOAL)),
+      weekdaysOnly: weekdaysInput.checked
+    };
+
+    savePlannerConfig(nextConfig);
+    const { plan, pendingLectures, behindCount, readinessScore } = buildStudyPlan(lectures, userCompletions, nextConfig);
+    savePlannerSchedule(plan);
+    const countdown = nextConfig.examDate ? getDaysUntil(nextConfig.examDate) : null;
+
+    document.getElementById("planner-health-title").textContent = nextConfig.examName
+      ? `${nextConfig.examName} plan`
+      : "Study plan";
+    document.getElementById("planner-health-copy").textContent = pendingLectures.length
+      ? `You have ${pendingLectures.length} pending lectures. ${behindCount ? `${behindCount} are behind your current plan.` : "You are on pace right now."}`
+      : "All lectures are complete. Use the remaining time for revision and mock tests.";
+    document.getElementById("planner-countdown").textContent = countdown === null ? "--" : `${countdown} days`;
+    document.getElementById("planner-pending").textContent = String(pendingLectures.length);
+    document.getElementById("planner-behind").textContent = String(behindCount);
+    document.getElementById("planner-readiness").textContent = `${readinessScore}%`;
+    document.getElementById("planner-progress-bar").style.width = `${readinessScore}%`;
+
+    if (!nextConfig.examDate) {
+      status.textContent = "Add an exam date to generate your schedule.";
+      scheduleList.innerHTML = `<div class="empty-state compact">Set your exam date first, then Learnify Elite will distribute pending lectures across the calendar.</div>`;
+      return;
+    }
+
+    status.textContent = behindCount
+      ? `You are ${behindCount} lecture${behindCount === 1 ? "" : "s"} behind the plan.`
+      : "You are aligned with your current study plan.";
+    scheduleList.innerHTML = "";
+
+    if (!plan.length) {
+      scheduleList.innerHTML = `<div class="empty-state compact">No pending lectures left. You can now focus on revision and past papers.</div>`;
+      return;
+    }
+
+    plan.forEach((entry) => {
+      const card = document.createElement("article");
+      card.className = `planner-day-card${entry.isOverdueDay ? " is-overdue" : ""}${entry.overflow ? " is-overflow" : ""}`;
+      card.innerHTML = `
+        <div class="planner-day-header">
+          <div>
+            <strong>${formatDate(entry.date)}</strong>
+            <span class="muted-text">${entry.lectures.length} lecture${entry.lectures.length === 1 ? "" : "s"}</span>
+          </div>
+          <span class="status-pill">${entry.isOverdueDay ? "Catch up" : entry.overflow ? "Overflow" : "Planned"}</span>
+        </div>
+        <div class="planner-day-list">
+          ${entry.lectures.map((lecture) => {
+            const subject = subjects.find((item) => item.id === lecture.subjectId);
+            return `<a class="planner-lecture-link" href="lectures.html?subject=${lecture.subjectId}&date=${lecture.date}">${subject?.name ?? "Subject"} - ${lecture.title}</a>`;
+          }).join("")}
+        </div>
+      `;
+      scheduleList.appendChild(card);
+    });
+  };
+
+  generateButton.onclick = renderCurrentPlan;
+  clearButton.onclick = () => {
+    examNameInput.value = "";
+    examDateInput.value = "";
+    dailyGoalInput.value = String(DEFAULT_DAILY_GOAL);
+    weekdaysInput.checked = false;
+    renderCurrentPlan();
+  };
+
+  renderCurrentPlan();
+}
+
+function renderPlanStatusCard(lectures, userCompletions) {
+  const container = document.getElementById("plan-status-card");
+  if (!container) {
+    return;
+  }
+
+  const config = getPlannerConfig();
+  const { behindCount, pendingLectures, readinessScore } = buildStudyPlan(lectures, userCompletions, config);
+  container.innerHTML = `
+    <div class="metric-chip"><span>Pending</span><strong>${pendingLectures.length}</strong></div>
+    <div class="metric-chip"><span>Behind</span><strong>${behindCount}</strong></div>
+    <div class="metric-chip"><span>Readiness</span><strong>${readinessScore}%</strong></div>
+  `;
+}
+
+function renderOverdueRecovery(lectures, subjects, userCompletions) {
+  const container = document.getElementById("overdue-recovery-list");
+  if (!container) {
+    return;
+  }
+
+  const todayKey = getLocalDateKey(new Date());
+  const completedLectureIds = new Set(userCompletions.filter((item) => item.completed).map((item) => item.lectureId));
+  const overdue = lectures
+    .filter((lecture) => lecture.date < todayKey && !completedLectureIds.has(lecture.id))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.lectureNumber - b.lectureNumber)
+    .slice(0, 5);
+
+  if (!overdue.length) {
+    container.innerHTML = `<div class="empty-state compact">No overdue lectures right now. You can stay focused on today's plan.</div>`;
+    return;
+  }
+
+  container.innerHTML = overdue.map((lecture, index) => {
+    const subject = subjects.find((item) => item.id === lecture.subjectId);
+    return `
+      <article class="analysis-row">
+        <div>
+          <strong>${index + 1}. ${subject?.name ?? "Subject"} - ${lecture.title}</strong>
+          <p class="muted-text">Scheduled for ${formatDate(lecture.date)}. Recover this before piling on newer lectures.</p>
+        </div>
+        <a class="ghost-button" href="lectures.html?subject=${lecture.subjectId}&date=${lecture.date}">Open</a>
+      </article>
+    `;
+  }).join("");
+}
+
+async function getAnalyticsSnapshot(force = false) {
+  const cached = getAnalyticsCache();
+  if (!force && state.analyticsSnapshot) {
+    return state.analyticsSnapshot;
+  }
+  if (!force && cached) {
+    state.analyticsSnapshot = cached;
+    return cached;
+  }
+
+  const requests = await Promise.allSettled([
+    apiRequest("/analytics/weekly"),
+    apiRequest("/analytics/subjects"),
+    apiRequest("/analytics/insights")
+  ]);
+
+  const snapshot = {
+    weekly: requests[0].status === "fulfilled" ? requests[0].value.data || null : null,
+    subjects: requests[1].status === "fulfilled" ? requests[1].value.data || null : null,
+    insights: requests[2].status === "fulfilled" ? requests[2].value.data || null : null
+  };
+
+  state.analyticsSnapshot = snapshot;
+  saveAnalyticsCache(snapshot);
+  return snapshot;
+}
+
+function renderInsightsPage(lectures, subjects, userCompletions, enhancements) {
+  const completedLectureIds = new Set(userCompletions.filter((item) => item.completed).map((item) => item.lectureId));
+  const completedCount = completedLectureIds.size;
+  const readiness = lectures.length ? Math.round((completedCount / lectures.length) * 100) : 0;
+  const overdueItems = getOverdueLectures(lectures, userCompletions);
+  const weakSubjects = subjects
+    .map((subject) => {
+      const subjectLectures = lectures.filter((lecture) => lecture.subjectId === subject.id);
+      const completed = subjectLectures.filter((lecture) => completedLectureIds.has(lecture.id)).length;
+      const progress = subjectLectures.length ? Math.round((completed / subjectLectures.length) * 100) : 0;
+      return { subject, completed, total: subjectLectures.length, progress };
+    })
+    .sort((a, b) => a.progress - b.progress);
+  const recentDailyCounts = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const key = getLocalDateKey(date);
+    return userCompletions.filter((item) => item.completedAt === key).length;
+  });
+  const velocity = recentDailyCounts.reduce((sum, count) => sum + count, 0) / recentDailyCounts.length;
+
+  document.getElementById("insights-readiness-title").textContent = `${readiness}% readiness score`;
+  document.getElementById("insights-readiness-copy").textContent = overdueItems.length
+    ? `${overdueItems.length} overdue lecture${overdueItems.length === 1 ? "" : "s"} are dragging down your readiness.`
+    : "You have no overdue lectures right now, which keeps your readiness healthier.";
+  document.getElementById("insights-readiness-bar").style.width = `${readiness}%`;
+
+  document.getElementById("velocity-title").textContent = `${velocity.toFixed(1)} lectures / day`;
+  document.getElementById("velocity-copy").textContent = velocity >= 2
+    ? "Your recent pace supports a strong finish if you keep the same rhythm."
+    : "Your recent pace is below the default 2-lecture target, so recovery blocks will help.";
+
+  const streakHistory = document.getElementById("streak-history");
+  streakHistory.innerHTML = "";
+  Array.from({ length: 8 }, (_, index) => {
+    const days = 7 * (7 - index);
+    const windowEnd = new Date();
+    windowEnd.setDate(windowEnd.getDate() - days);
+    const count = Array.from({ length: 7 }, (_, inner) => {
+      const sample = new Date(windowEnd);
+      sample.setDate(sample.getDate() + inner);
+      const key = getLocalDateKey(sample);
+      return userCompletions.some((item) => item.completedAt === key);
+    }).filter(Boolean).length;
+    const cell = document.createElement("div");
+    cell.className = "streak-history-cell";
+    cell.innerHTML = `<span>W${index + 1}</span><strong>${count}/7</strong>`;
+    streakHistory.appendChild(cell);
+  });
+
+  applyAnalyticsImage(
+    document.getElementById("insights-weekly-chart"),
+    document.getElementById("insights-weekly-fallback"),
+    enhancements.weekly?.chartUrl,
+    "Weekly completion chart"
+  );
+
+  const weaknessList = document.getElementById("subject-weakness-list");
+  weaknessList.innerHTML = weakSubjects.map((entry, index) => `
+    <article class="analysis-row">
+      <div>
+        <strong>${index + 1}. ${entry.subject.name}</strong>
+        <p class="muted-text">${entry.completed}/${entry.total} completed. ${progressColorLabel(entry.progress)}.</p>
+      </div>
+      <span class="status-pill">${entry.progress}%</span>
+    </article>
+  `).join("");
+
+  const recoveryList = document.getElementById("recovery-plan-list");
+  recoveryList.innerHTML = overdueItems.length
+    ? overdueItems.slice(0, 6).map((lecture, index) => {
+        const subject = subjects.find((item) => item.id === lecture.subjectId);
+        return `
+          <article class="analysis-row">
+            <div>
+              <strong>${index + 1}. ${subject?.name ?? "Subject"} - ${lecture.title}</strong>
+              <p class="muted-text">Missed on ${formatDate(lecture.date)}. Recover this before newer lectures.</p>
+            </div>
+            <a class="ghost-button" href="lectures.html?subject=${lecture.subjectId}&date=${lecture.date}">Recover</a>
+          </article>
+        `;
+      }).join("")
+    : `<div class="empty-state compact">No overdue lectures. Your recovery plan is clear right now.</div>`;
+
+  const suggestionsList = document.getElementById("insights-suggestions-list");
+  const suggestions = Array.isArray(enhancements.insights?.suggestions) ? enhancements.insights.suggestions : [];
+  suggestionsList.innerHTML = "";
+  (suggestions.length ? suggestions.slice(0, 4) : getFallbackSuggestions(lectures, userCompletions)).forEach((suggestion) => {
+    const item = document.createElement("li");
+    item.textContent = suggestion;
+    suggestionsList.appendChild(item);
+  });
+}
+
+function getOverdueLectures(lectures, userCompletions) {
+  const todayKey = getLocalDateKey(new Date());
+  const completedLectureIds = new Set(userCompletions.filter((item) => item.completed).map((item) => item.lectureId));
+  return lectures
+    .filter((lecture) => lecture.date < todayKey && !completedLectureIds.has(lecture.id))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.lectureNumber - b.lectureNumber);
+}
+
+function getFallbackSuggestions(lectures, userCompletions) {
+  const overdue = getOverdueLectures(lectures, userCompletions);
+  const streak = getStreakCount(userCompletions);
+  return [
+    overdue.length
+      ? `Clear your oldest overdue lecture first to stop recovery debt from growing.`
+      : `Stay on plan by completing today's scheduled lecture block first.`,
+    streak
+      ? `Complete 1 more lecture today to protect your ${streak}-day streak.`
+      : "Start a new streak with one finished lecture today.",
+    "Use Focus Mode for the next lecture so notes, timer, and checklist stay in one place."
+  ];
+}
+
+function renderSubjectNotes(subjects) {
+  const grid = document.getElementById("subject-notes-grid");
+  if (!grid) {
+    return;
+  }
+
+  const storedNotes = readStorage(STORAGE_KEYS.subjectNotes, {});
+  grid.innerHTML = "";
+
+  subjects.forEach((subject) => {
+    const card = document.createElement("article");
+    card.className = "subject-note-card";
+    card.innerHTML = `
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">${subject.name}</span>
+          <h4>Revision note</h4>
+        </div>
+        <a class="ghost-button" href="lectures.html?subject=${subject.id}">Open lectures</a>
+      </div>
+      <textarea class="focus-notes subject-note-input" placeholder="Add formulas, weak concepts, or revision reminders...">${escapeHtml(storedNotes[subject.id] || "")}</textarea>
+    `;
+    card.querySelector(".subject-note-input").addEventListener("input", (event) => {
+      storedNotes[subject.id] = event.target.value;
+      writeStorage(STORAGE_KEYS.subjectNotes, storedNotes);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function getDaysUntil(dateKey) {
+  const today = parseDateString(getLocalDateKey(new Date()));
+  const target = parseDateString(dateKey);
+  return Math.max(Math.ceil((target - today) / (1000 * 60 * 60 * 24)), 0);
+}
+
+function maybeSuggestPlanRecovery() {
+  const lectures = state.currentLectures || [];
+  const completions = state.currentCompletions || [];
+  const config = getPlannerConfig();
+  if (!config.examDate) {
+    return;
+  }
+  const { behindCount } = buildStudyPlan(lectures, completions, config);
+  if (behindCount >= 2) {
+    showToast(`You are ${behindCount} lectures behind your current plan.`, "warning");
+  }
+}
+
+function maybeShowSmartNotifications(lectures, userCompletions) {
+  const todayCount = getTodayCompletionCount(userCompletions);
+  const streak = getStreakCount(userCompletions);
+  if (streak > 0 && todayCount === 0) {
+    showToast(`Streak risk: finish 1 lecture today to protect your ${streak}-day streak.`, "warning");
+  }
+  maybeSuggestPlanRecovery();
+}
+
+function renderWeeklyWinnerCard(friends) {
+  const container = document.getElementById("weekly-winner-card");
+  if (!container) {
+    return;
+  }
+
+  const winner = friends[0];
+  if (!winner) {
+    container.innerHTML = `<div class="empty-state compact">Add friends to surface a weekly winner.</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <article class="friend-chip spotlight">
+      <div class="friend-chip-main">
+        <img class="avatar-badge" src="${getAvatarUrlForUser(winner)}" alt="${winner.name} avatar" loading="lazy">
+        <div>
+          <strong>${winner.name}</strong>
+          <span class="muted-text">Most likely to set the pace this week</span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderWeeklyChallengeCard() {
+  const container = document.getElementById("challenge-card");
+  if (!container) {
+    return;
+  }
+
+  const weeklyCount = getWeeklyCompletionCount(state.currentCompletions || []);
+  const remaining = Math.max(DEFAULT_WEEKLY_CHALLENGE - weeklyCount, 0);
+  container.innerHTML = `
+    <div class="goal-row">
+      <span>This week</span>
+      <strong>${weeklyCount} / ${DEFAULT_WEEKLY_CHALLENGE}</strong>
+    </div>
+    <div class="progress-bar"><span style="width:${Math.min((weeklyCount / DEFAULT_WEEKLY_CHALLENGE) * 100, 100)}%"></span></div>
+    <p class="muted-text">${remaining ? `Complete ${remaining} more lecture${remaining === 1 ? "" : "s"} to finish the weekly challenge.` : "Challenge complete. Push for a personal best."}</p>
+  `;
+}
+
+function renderFriendActivityFeed(friends) {
+  const container = document.getElementById("friend-activity-feed");
+  if (!container) {
+    return;
+  }
+
+  if (!friends.length) {
+    container.innerHTML = `<div class="empty-state compact">Add friends to see shared momentum and study activity.</div>`;
+    return;
+  }
+
+  container.innerHTML = friends.slice(0, 4).map((friend, index) => `
+    <article class="analysis-row">
+      <div>
+        <strong>${friend.name}</strong>
+        <p class="muted-text">${index === 0 ? "is setting the pace this week." : index === 1 ? "just moved up the accountability board." : "is still in the race - one focused session could change the board."}</p>
+      </div>
+      <span class="status-pill">Active</span>
+    </article>
+  `).join("");
+}
+
+function renderLeaderboardSubjectComparison(lectures, subjects, userCompletions) {
+  const container = document.getElementById("leaderboard-subject-compare");
+  if (!container) {
+    return;
+  }
+
+  const completedLectureIds = new Set(userCompletions.filter((item) => item.completed).map((item) => item.lectureId));
+  const rows = subjects.map((subject) => {
+    const subjectLectures = lectures.filter((lecture) => lecture.subjectId === subject.id);
+    const completed = subjectLectures.filter((lecture) => completedLectureIds.has(lecture.id)).length;
+    const progress = subjectLectures.length ? Math.round((completed / subjectLectures.length) * 100) : 0;
+    return { subject, progress, completed, total: subjectLectures.length };
+  });
+
+  container.innerHTML = rows.map((row) => `
+    <div class="comparison-row">
+      <span>${row.subject.name}</span>
+      <div class="comparison-track"><span style="width:${row.progress}%"></span></div>
+      <strong>${row.progress}%</strong>
+    </div>
+  `).join("");
+}
+
+function getWeeklyCompletionCount(completions) {
+  const start = parseDateString(getLocalDateKey(new Date()));
+  start.setDate(start.getDate() - 6);
+  return completions.filter((item) => item.completed && item.completedAt && parseDateString(item.completedAt) >= start).length;
+}
+
+function ensureToastHost() {
+  if (document.getElementById("toast-host")) {
+    return;
+  }
+  const host = document.createElement("div");
+  host.id = "toast-host";
+  host.className = "toast-host";
+  document.body.appendChild(host);
+}
+
+function showToast(message, tone = "info") {
+  const host = document.getElementById("toast-host");
+  if (!host) {
+    return;
+  }
+  const signature = `${tone}:${message}`;
+  const lastShown = Number(host.dataset.lastToastAt || 0);
+  if (host.dataset.lastToastSignature === signature && Date.now() - lastShown < 4000) {
+    return;
+  }
+  host.dataset.lastToastSignature = signature;
+  host.dataset.lastToastAt = String(Date.now());
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${tone}`;
+  toast.textContent = message;
+  host.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("visible"));
+  setTimeout(() => {
+    toast.classList.remove("visible");
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+}
+
+function showQueuedToasts() {
+  popQueuedToasts().forEach((item) => showToast(item.message, item.tone));
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || window.location.protocol === "file:") {
+    return;
+  }
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => undefined);
+  }, { once: true });
+}
+
+function bindInstallPromptUi() {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    state.installPromptEvent = event;
+    const button = document.getElementById("install-app-button");
+    const status = document.getElementById("install-app-status");
+    if (button) {
+      button.classList.remove("hidden");
+      button.onclick = async () => {
+        state.installPromptEvent?.prompt();
+        const choice = await state.installPromptEvent?.userChoice;
+        if (choice?.outcome === "accepted") {
+          showToast("Learnify Elite is being installed.", "success");
+          button.classList.add("hidden");
+        }
+      };
+    }
+    if (status) {
+      status.textContent = "Install is available on this device.";
+    }
+  });
+}
+
+function getAdminApiKey() {
+  return localStorage.getItem(STORAGE_KEYS.adminApiKey) || "";
+}
+
+function saveAdminApiKey(value) {
+  if (value?.trim()) {
+    localStorage.setItem(STORAGE_KEYS.adminApiKey, value.trim());
+    return;
+  }
+  localStorage.removeItem(STORAGE_KEYS.adminApiKey);
+}
+
+async function adminRequest(path, body) {
+  return apiRequest(path, {
+    method: "POST",
+    headers: {
+      "x-admin-key": getAdminApiKey()
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+function renderAdminPage(subjects) {
+  const keyInput = document.getElementById("admin-api-key");
+  const keyButton = document.getElementById("save-admin-api-key");
+  const keyStatus = document.getElementById("admin-key-status");
+  const subjectName = document.getElementById("admin-subject-name");
+  const createSubjectButton = document.getElementById("admin-create-subject");
+  const subjectSelect = document.getElementById("admin-subject-select");
+  const lectureTitle = document.getElementById("admin-lecture-title");
+  const lectureDate = document.getElementById("admin-lecture-date");
+  const lectureNumber = document.getElementById("admin-lecture-number");
+  const lectureLink = document.getElementById("admin-lecture-link");
+  const createLectureButton = document.getElementById("admin-create-lecture");
+  const csvInput = document.getElementById("admin-csv-input");
+  const importButton = document.getElementById("admin-import-csv");
+  const clearButton = document.getElementById("admin-clear-csv");
+  const activityLog = document.getElementById("admin-activity-log");
+
+  if (!keyInput || !keyButton || !keyStatus || !subjectSelect || !activityLog) {
+    return;
+  }
+
+  const appendLog = (message) => {
+    const row = document.createElement("div");
+    row.className = "admin-log-row";
+    row.textContent = message;
+    activityLog.prepend(row);
+  };
+
+  keyInput.value = getAdminApiKey();
+  keyStatus.textContent = getAdminApiKey() ? "Admin key saved locally." : "Enter your admin key to create or import content.";
+  subjectSelect.innerHTML = subjects.map((subject) => `<option value="${subject.id}">${subject.name}</option>`).join("");
+
+  keyButton.onclick = () => {
+    saveAdminApiKey(keyInput.value);
+    keyStatus.textContent = getAdminApiKey() ? "Admin key saved locally." : "Admin key cleared.";
+    showToast("Admin key updated.", "success");
+  };
+
+  createSubjectButton.onclick = async () => {
+    if (!subjectName.value.trim()) {
+      showToast("Enter a subject name first.", "warning");
+      return;
+    }
+    try {
+      await adminRequest("/admin/subjects", { name: subjectName.value.trim() });
+      appendLog(`Created subject: ${subjectName.value.trim()}`);
+      showToast("Subject created.", "success");
+      subjectName.value = "";
+      clearStudyDataCache();
+      await initAdminPage();
+    } catch (error) {
+      showToast(error.message || "Unable to create subject.", "danger");
+    }
+  };
+
+  createLectureButton.onclick = async () => {
+    try {
+      await adminRequest("/admin/lectures", {
+        title: lectureTitle.value.trim(),
+        subject: subjectSelect.value,
+        youtubeLink: lectureLink.value.trim(),
+        date: lectureDate.value,
+        lectureNumber: Number(lectureNumber.value || 1)
+      });
+      appendLog(`Created lecture: ${lectureTitle.value.trim()}`);
+      showToast("Lecture created.", "success");
+      lectureTitle.value = "";
+      lectureDate.value = "";
+      lectureNumber.value = "1";
+      lectureLink.value = "";
+      clearStudyDataCache();
+    } catch (error) {
+      showToast(error.message || "Unable to create lecture.", "danger");
+    }
+  };
+
+  importButton.onclick = async () => {
+    const rows = parseCsvSchedule(csvInput.value);
+    if (!rows.length) {
+      showToast("Paste schedule rows before importing.", "warning");
+      return;
+    }
+
+    const subjectMap = new Map(subjects.map((subject) => [subject.name.toLowerCase(), subject.id]));
+    let imported = 0;
+    for (const row of rows) {
+      try {
+        let subjectId = subjectMap.get(row.subject.toLowerCase());
+        if (!subjectId) {
+          const created = await adminRequest("/admin/subjects", { name: row.subject });
+          subjectId = created.data?._id || created.data?.id;
+          subjectMap.set(row.subject.toLowerCase(), subjectId);
+          appendLog(`Created missing subject: ${row.subject}`);
+        }
+        await adminRequest("/admin/lectures", {
+          title: row.lecture,
+          subject: subjectId,
+          youtubeLink: row.link,
+          date: row.date,
+          lectureNumber: row.lectureNumber
+        });
+        imported += 1;
+      } catch (error) {
+        appendLog(`Skipped row for ${row.subject} ${row.lecture}: ${error.message}`);
+      }
+    }
+    clearStudyDataCache();
+    appendLog(`CSV import finished. ${imported} lecture rows created.`);
+    showToast(`Imported ${imported} lecture rows.`, "success");
+  };
+
+  clearButton.onclick = () => {
+    csvInput.value = "";
+  };
+}
+
+function parseCsvSchedule(raw) {
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.toLowerCase().startsWith("date,subject"))
+    .map((line) => {
+      const [dateText, subject, lecture, link = ""] = line.split(",");
+      const date = normalizeImportedDate(dateText);
+      const lectureNumberMatch = lecture.match(/(\d+)/);
+      return {
+        date,
+        subject: subject.trim(),
+        lecture: lecture.trim(),
+        link: link.trim(),
+        lectureNumber: lectureNumberMatch ? Number(lectureNumberMatch[1]) : 1
+      };
+    })
+    .filter((row) => row.date && row.subject && row.lecture);
+}
+
+function normalizeImportedDate(value) {
+  const raw = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return getLocalDateKey(parsed);
+  }
+  const parts = raw.split("-");
+  if (parts.length === 3) {
+    const [day, monthName, year] = parts;
+    const probe = new Date(`${day} ${monthName} ${year}`);
+    if (!Number.isNaN(probe.getTime())) {
+      return getLocalDateKey(probe);
+    }
+  }
+  return null;
+}
+
+function toggleBreakMode() {
+  focusBreakMode = !focusBreakMode;
+  focusRemainingSeconds = focusBreakMode ? DEFAULT_BREAK_SECONDS : DEFAULT_FOCUS_SECONDS;
+  setFocusInputValues(focusRemainingSeconds);
+  updateFocusTimerDisplay();
+  const breakButton = document.getElementById("focus-break-toggle");
+  if (breakButton) {
+    breakButton.textContent = focusBreakMode ? "Back to focus timer" : "Start 10 min break";
+  }
+  const timerButton = document.getElementById("focus-timer-toggle");
+  if (timerButton) {
+    timerButton.textContent = "Start Timer";
+  }
+  if (focusTimerInterval) {
+    clearInterval(focusTimerInterval);
+    focusTimerInterval = null;
+  }
+}
+
+function toggleFocusFullscreen() {
+  const panel = document.querySelector(".focus-mode-panel");
+  if (!panel) {
+    return;
+  }
+  if (!document.fullscreenElement) {
+    panel.requestFullscreen?.().catch(() => undefined);
+    return;
+  }
+  document.exitFullscreen?.().catch(() => undefined);
+}
+
+function toggleAmbientSound() {
+  const button = document.getElementById("focus-ambient-toggle");
+  if (focusNoiseNode) {
+    stopAmbientSound();
+    if (button) {
+      button.textContent = "Ambient sound off";
+    }
+    return;
+  }
+
+  try {
+    focusAudioContext = focusAudioContext || new (window.AudioContext || window.webkitAudioContext)();
+    const bufferSize = focusAudioContext.sampleRate * 2;
+    const noiseBuffer = focusAudioContext.createBuffer(1, bufferSize, focusAudioContext.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i += 1) {
+      const white = (Math.random() * 2) - 1;
+      lastOut = (lastOut + (0.02 * white)) / 1.02;
+      data[i] = lastOut * 3.5;
+    }
+
+    focusNoiseNode = focusAudioContext.createBufferSource();
+    focusNoiseNode.buffer = noiseBuffer;
+    focusNoiseNode.loop = true;
+    focusNoiseGain = focusAudioContext.createGain();
+    focusNoiseGain.gain.value = 0.02;
+    focusNoiseNode.connect(focusNoiseGain).connect(focusAudioContext.destination);
+    focusNoiseNode.start();
+    if (button) {
+      button.textContent = "Ambient sound on";
+    }
+  } catch (error) {
+    showToast("Ambient sound is unavailable in this browser.", "warning");
+  }
+}
+
+function stopAmbientSound() {
+  try {
+    focusNoiseNode?.stop();
+  } catch (error) {
+    // noop
+  }
+  focusNoiseNode = null;
+  if (focusNoiseGain) {
+    focusNoiseGain.disconnect();
+    focusNoiseGain = null;
+  }
+}
+
+function getFocusChecklistMap() {
+  return readStorage(STORAGE_KEYS.focusChecklist, {});
+}
+
+function renderFocusChecklist(lectureId) {
+  const container = document.getElementById("focus-checklist");
+  if (!container) {
+    return;
+  }
+  const map = getFocusChecklistMap();
+  const items = map[lectureId] || [
+    { label: "Watch actively", done: false },
+    { label: "Write 3 key points", done: false },
+    { label: "Flag weak concepts", done: false }
+  ];
+
+  container.innerHTML = "";
+  items.forEach((item, index) => {
+    const row = document.createElement("label");
+    row.className = "focus-checklist-item";
+    row.innerHTML = `
+      <input type="checkbox" ${item.done ? "checked" : ""}>
+      <span>${item.label}</span>
+    `;
+    row.querySelector("input").addEventListener("change", (event) => {
+      items[index].done = event.target.checked;
+      map[lectureId] = items;
+      writeStorage(STORAGE_KEYS.focusChecklist, map);
+    });
+    container.appendChild(row);
+  });
+}
+
+function storeFocusSession(lectureId) {
+  const sessions = readStorage(STORAGE_KEYS.focusSessions, []);
+  sessions.unshift({
+    lectureId,
+    recordedAt: new Date().toISOString(),
+    durationMinutes: Math.round((getFocusInputSeconds() - focusRemainingSeconds) / 60)
+  });
+  writeStorage(STORAGE_KEYS.focusSessions, sessions.slice(0, 12));
+  renderFocusHistory();
+}
+
+function renderFocusHistory() {
+  const container = document.getElementById("focus-history");
+  if (!container) {
+    return;
+  }
+  const sessions = readStorage(STORAGE_KEYS.focusSessions, []);
+  if (!sessions.length) {
+    container.innerHTML = `<div class="empty-state compact">Your completed focus sessions will appear here.</div>`;
+    return;
+  }
+
+  container.innerHTML = sessions.map((session) => {
+    const lecture = (state.currentLectures || []).find((item) => item.id === session.lectureId);
+    return `
+      <article class="analysis-row">
+        <div>
+          <strong>${lecture?.title || "Lecture session"}</strong>
+          <p class="muted-text">${new Date(session.recordedAt).toLocaleString()} - ${Math.max(session.durationMinutes, 0)} min</p>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 

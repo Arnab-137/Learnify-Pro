@@ -29,15 +29,7 @@
         <span class="eyebrow">Learnify Elite</span>
         <strong>Learnify Elite</strong>
       </div>
-      <nav class="app-nav" aria-label="Primary">
-        <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
-        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
-        <a id="nav-lectures" class="app-link active" href="lectures.html">Lectures</a>
-        <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
-        <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
-        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
-        <a id="nav-settings" class="app-link" href="settings.html">Settings</a>
-      </nav>
+      <nav class="app-nav" aria-label="Primary"></nav>
       <div class="app-user-bar">
         <p id="welcome-text" class="muted-text"></p>
         <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
@@ -67,6 +59,9 @@
         </div>
         <div class="filters-bar">
           <input id="lecture-search" class="search-input" type="search" placeholder="Search lectures by title or subject">
+          <select id="lecture-subject-filter" class="filter-select">
+            <option value="all">All subjects</option>
+          </select>
           <select id="lecture-status-filter" class="filter-select">
             <option value="all">All states</option>
             <option value="current">Current</option>
@@ -75,6 +70,31 @@
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
           </select>
+          <select id="lecture-sort" class="filter-select">
+            <option value="date">Sort by date</option>
+            <option value="number">Sort by lecture number</option>
+            <option value="priority">Sort by priority</option>
+          </select>
+        </div>
+        <div class="lectures-support-grid">
+          <article class="action-card compact-card">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">Recovery Plan</span>
+                <h4>Missed / overdue catch-up</h4>
+              </div>
+            </div>
+            <div id="overdue-recovery-list" class="analysis-list compact-list"></div>
+          </article>
+          <article class="action-card compact-card">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">Plan Status</span>
+                <h4>Stay ahead of your schedule</h4>
+              </div>
+            </div>
+            <div id="plan-status-card" class="plan-status-card"></div>
+          </article>
         </div>
         <div id="resume-banner" class="resume-banner hidden">
           <div>
@@ -115,11 +135,34 @@
               <button id="focus-timer-toggle" class="primary-button" type="button">Start Timer</button>
               <button id="focus-timer-reset" class="ghost-button" type="button">Reset</button>
             </div>
+            <div class="focus-utility-grid">
+              <button id="focus-break-toggle" class="ghost-button" type="button">Start 10 min break</button>
+              <button id="focus-fullscreen" class="ghost-button" type="button">Fullscreen</button>
+              <button id="focus-ambient-toggle" class="ghost-button" type="button">Ambient sound off</button>
+            </div>
           </div>
           <div class="focus-notes-card">
             <span class="eyebrow">Notes</span>
             <textarea id="focus-notes" class="focus-notes" placeholder="Capture formulas, concepts, or next steps..."></textarea>
+            <div class="focus-checklist-shell">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">Checklist</span>
+                  <h4>Session checklist</h4>
+                </div>
+              </div>
+              <div id="focus-checklist" class="focus-checklist"></div>
+            </div>
           </div>
+        </div>
+        <div class="focus-history-shell">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Session History</span>
+              <h4>Recent deep work blocks</h4>
+            </div>
+          </div>
+          <div id="focus-history" class="analysis-list compact-list"></div>
         </div>
         <div class="action-card-actions">
           <a id="focus-open-link" class="playlist-link" href="#" target="_blank" rel="noreferrer">Open Link</a>
@@ -128,13 +171,7 @@
       </div>
     </div>
 
-    <nav class="mobile-nav" aria-label="Mobile Primary">
-      <a class="app-link" href="dashboard.html">Dashboard</a>
-      <a class="app-link" href="subjects.html">Subjects</a>
-      <a class="app-link active" href="lectures.html">Lectures</a>
-      <a class="app-link" href="friends.html">Friends</a>
-      <a class="app-link" href="settings.html">Settings</a>
-    </nav>
+    <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
   </div>
 
   <script src="analytics.js"></script>

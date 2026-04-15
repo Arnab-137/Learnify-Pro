@@ -29,15 +29,7 @@
         <span class="eyebrow">Learnify Elite</span>
         <strong>Learnify Elite</strong>
       </div>
-      <nav class="app-nav" aria-label="Primary">
-        <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
-        <a id="nav-subjects" class="app-link" href="subjects.html">Subjects</a>
-        <a id="nav-lectures" class="app-link" href="lectures.html">Lectures</a>
-        <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
-        <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
-        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
-        <a id="nav-settings" class="app-link active" href="settings.html">Settings</a>
-      </nav>
+      <nav class="app-nav" aria-label="Primary"></nav>
       <div class="app-user-bar">
         <p id="welcome-text" class="muted-text"></p>
         <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
@@ -85,17 +77,21 @@
             </div>
             <p id="api-base-url-status" class="muted-text compact-status">Current API endpoint will appear here.</p>
           </article>
+          <article class="action-card">
+            <span class="eyebrow">App Install</span>
+            <h4>PWA support</h4>
+            <p class="muted-text">Install Learnify Elite to your home screen for a more app-like mobile workflow with offline shell caching.</p>
+            <div class="action-card-actions">
+              <button id="install-app-button" class="primary-button hidden" type="button">Install app</button>
+              <button id="test-notification-button" class="ghost-button" type="button">Test reminder toast</button>
+            </div>
+            <p id="install-app-status" class="muted-text compact-status">The install button appears automatically when your browser supports it.</p>
+          </article>
         </div>
       </section>
     </section>
 
-    <nav class="mobile-nav" aria-label="Mobile Primary">
-      <a class="app-link" href="dashboard.html">Dashboard</a>
-      <a class="app-link" href="subjects.html">Subjects</a>
-      <a class="app-link" href="lectures.html">Lectures</a>
-      <a class="app-link" href="friends.html">Friends</a>
-      <a class="app-link active" href="settings.html">Settings</a>
-    </nav>
+    <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
   </div>
   <script src="analytics.js"></script>
   <script src="app.js"></script>

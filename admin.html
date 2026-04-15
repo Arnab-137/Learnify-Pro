@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learnify Elite Admin</title>
+  <meta name="description" content="Manage subjects, lectures, resource links, and CSV imports for Learnify Elite content operations.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="canonical" href="https://learnify-elite.vercel.app/admin.html">
+  <link rel="manifest" href="site.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Learnify Elite">
+  <meta property="og:title" content="Learnify Elite Admin">
+  <meta property="og:description" content="Create subjects, upload lectures, and import study schedules into Learnify Elite.">
+  <meta property="og:url" content="https://learnify-elite.vercel.app/admin.html">
+  <meta property="og:image" content="https://learnify-elite.vercel.app/favicon.png">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="admin">
+  <div class="app-shell">
+    <header class="app-header view">
+      <div class="app-brand">
+        <span class="eyebrow">Learnify Elite</span>
+        <strong>Learnify Elite</strong>
+      </div>
+      <nav class="app-nav" aria-label="Primary"></nav>
+      <div class="app-user-bar">
+        <p id="welcome-text" class="muted-text"></p>
+        <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+      </div>
+    </header>
+
+    <section class="view page-view">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Admin</span>
+          <h2>Manage content without reseeding</h2>
+          <p class="muted-text">Create subjects, add lectures, and import schedules with a CSV workflow that talks to the live admin API.</p>
+        </div>
+      </header>
+
+      <section class="page-panel admin-page-panel">
+        <div class="admin-grid">
+          <article class="action-card">
+            <span class="eyebrow">Auth</span>
+            <h4>Admin API key</h4>
+            <div class="friend-form">
+              <input id="admin-api-key" class="search-input" type="password" placeholder="Paste your admin API key">
+              <button id="save-admin-api-key" class="primary-button" type="button">Save key</button>
+            </div>
+            <p id="admin-key-status" class="muted-text compact-status">This key is stored only in your browser for admin requests.</p>
+          </article>
+
+          <article class="action-card">
+            <span class="eyebrow">Create Subject</span>
+            <h4>Add a new subject</h4>
+            <div class="settings-grid">
+              <label>
+                <span>Subject name</span>
+                <input id="admin-subject-name" class="search-input" type="text" placeholder="Heat Transfer">
+              </label>
+            </div>
+            <button id="admin-create-subject" class="primary-button" type="button">Create subject</button>
+          </article>
+        </div>
+
+        <div class="admin-grid">
+          <article class="action-card">
+            <span class="eyebrow">Create Lecture</span>
+            <h4>Add a lecture manually</h4>
+            <div class="settings-grid">
+              <label>
+                <span>Subject</span>
+                <select id="admin-subject-select" class="filter-select"></select>
+              </label>
+              <label>
+                <span>Lecture title</span>
+                <input id="admin-lecture-title" class="search-input" type="text" placeholder="Lec-01">
+              </label>
+              <label>
+                <span>Date</span>
+                <input id="admin-lecture-date" class="search-input" type="date">
+              </label>
+              <label>
+                <span>Lecture number</span>
+                <input id="admin-lecture-number" class="search-input" type="number" min="1" value="1">
+              </label>
+              <label>
+                <span>Link</span>
+                <input id="admin-lecture-link" class="search-input" type="url" placeholder="https://...">
+              </label>
+            </div>
+            <button id="admin-create-lecture" class="primary-button" type="button">Create lecture</button>
+          </article>
+
+          <article class="action-card">
+            <span class="eyebrow">CSV Import</span>
+            <h4>Bulk import schedule rows</h4>
+            <p class="muted-text">Use format: <code>Date,Subject,Lecture,Link</code>. Dates should be like <code>15-Apr-2026</code>.</p>
+            <textarea id="admin-csv-input" class="focus-notes admin-csv-input" placeholder="Date,Subject,Lecture,Link&#10;15-Apr-2026,Design of Machine Elements,Lec-01,https://..."></textarea>
+            <div class="action-card-actions">
+              <button id="admin-import-csv" class="primary-button" type="button">Import CSV</button>
+              <button id="admin-clear-csv" class="ghost-button" type="button">Clear</button>
+            </div>
+          </article>
+        </div>
+
+        <article class="action-card">
+          <span class="eyebrow">Status</span>
+          <h4>Admin activity</h4>
+          <div id="admin-activity-log" class="admin-activity-log"></div>
+        </article>
+      </section>
+    </section>
+
+    <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
+  </div>
+
+  <script src="analytics.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

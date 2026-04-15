@@ -29,15 +29,7 @@
         <span class="eyebrow">Learnify Elite</span>
         <strong>Learnify Elite</strong>
       </div>
-      <nav class="app-nav" aria-label="Primary">
-        <a id="nav-dashboard" class="app-link" href="dashboard.html">Dashboard</a>
-        <a id="nav-subjects" class="app-link active" href="subjects.html">Subjects</a>
-        <a id="nav-lectures" class="app-link" href="lectures.html">Lectures</a>
-        <a id="nav-focus" class="app-link" href="lectures.html?focus=1">Focus Mode</a>
-        <a id="nav-friends" class="app-link" href="friends.html">Friends</a>
-        <a id="nav-leaderboard" class="app-link" href="leaderboard.html">Leaderboard</a>
-        <a id="nav-settings" class="app-link" href="settings.html">Settings</a>
-      </nav>
+      <nav class="app-nav" aria-label="Primary"></nav>
       <div class="app-user-bar">
         <p id="welcome-text" class="muted-text"></p>
         <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
@@ -61,16 +53,19 @@
           </div>
         </div>
         <div id="subjects-grid" class="subjects-grid"></div>
+        <section class="section-spaced">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Revision Layer</span>
+              <h3>Subject revision notebook</h3>
+            </div>
+          </div>
+          <div id="subject-notes-grid" class="subject-notes-grid"></div>
+        </section>
       </section>
     </section>
 
-    <nav class="mobile-nav" aria-label="Mobile Primary">
-      <a class="app-link" href="dashboard.html">Dashboard</a>
-      <a class="app-link active" href="subjects.html">Subjects</a>
-      <a class="app-link" href="lectures.html">Lectures</a>
-      <a class="app-link" href="friends.html">Friends</a>
-      <a class="app-link" href="settings.html">Settings</a>
-    </nav>
+    <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
   </div>
 
   <script src="analytics.js"></script>

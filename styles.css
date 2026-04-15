@@ -2671,3 +2671,392 @@ body[data-theme="dark"]::after {
     transform: translateY(-5px);
   }
 }
+
+.marketing-stack,
+.planner-grid,
+.insights-hero-grid,
+.insights-content-grid,
+.admin-grid,
+.lectures-support-grid,
+.friends-highlights-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.marketing-stack,
+.planner-schedule-card,
+.section-spaced {
+  margin-top: 24px;
+}
+
+.marketing-panel,
+.subject-note-card,
+.planner-day-card,
+.toast,
+.analysis-row,
+.metric-chip,
+.preview-card,
+.testimonial-card,
+.marketing-feature,
+.streak-history-cell,
+.admin-log-row {
+  background: var(--panel-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 34px rgba(34, 47, 65, 0.08);
+}
+
+.marketing-panel {
+  padding: 28px;
+}
+
+.marketing-grid,
+.preview-grid,
+.testimonial-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.marketing-feature,
+.preview-card,
+.testimonial-card {
+  padding: 20px;
+}
+
+.marketing-feature h4,
+.preview-card strong,
+.testimonial-card strong,
+.planner-day-header strong,
+.analysis-row strong {
+  font-family: var(--font-display);
+}
+
+.insights-hero-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.insights-content-grid,
+.planner-grid,
+.admin-grid,
+.friends-highlights-grid,
+.lectures-support-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analysis-list,
+.planner-schedule-list,
+.comparison-stack,
+.admin-activity-log {
+  display: grid;
+  gap: 14px;
+}
+
+.analysis-row,
+.planner-day-card,
+.subject-note-card,
+.metric-chip,
+.admin-log-row {
+  padding: 16px 18px;
+}
+
+.analysis-row,
+.planner-day-header,
+.focus-utility-grid,
+.lecture-support-row,
+.planner-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-row p,
+.planner-day-card p {
+  margin: 6px 0 0;
+}
+
+.streak-history-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.streak-history-cell {
+  padding: 14px;
+  text-align: center;
+}
+
+.streak-history-cell span,
+.metric-chip span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.streak-history-cell strong,
+.metric-chip strong {
+  display: block;
+  margin-top: 6px;
+}
+
+.planner-day-card.is-overdue {
+  border-color: rgba(211, 93, 79, 0.4);
+}
+
+.planner-day-card.is-overflow {
+  border-color: rgba(216, 169, 58, 0.4);
+}
+
+.planner-day-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.planner-lecture-link {
+  color: var(--text);
+  text-decoration: none;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  transition: transform var(--duration-fast) var(--ease-smooth), background var(--duration-fast) ease;
+}
+
+.planner-lecture-link:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.subject-notes-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.lecture-support-row {
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.bookmark-toggle {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.bookmark-toggle.active {
+  background: rgba(255, 199, 92, 0.2);
+  border-color: rgba(255, 199, 92, 0.45);
+}
+
+.inline-select-shell,
+.lecture-note-shell,
+.theme-switch-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 28px;
+}
+
+.inline-select-shell span,
+.lecture-note-shell span {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.revision-select,
+.admin-page-panel select {
+  min-width: 170px;
+}
+
+.lecture-inline-note,
+.subject-note-input,
+.admin-csv-input {
+  width: 100%;
+  min-height: 94px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text);
+  resize: vertical;
+}
+
+.revision-pill {
+  background: rgba(46, 111, 226, 0.12);
+  color: var(--info);
+}
+
+.compact-card {
+  padding: 22px;
+}
+
+.compact-list .analysis-row {
+  padding: 12px 14px;
+}
+
+.plan-status-card {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.focus-utility-grid {
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.focus-checklist-shell,
+.focus-history-shell {
+  margin-top: 18px;
+}
+
+.focus-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.focus-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.focus-checklist-item input {
+  accent-color: var(--success);
+}
+
+.friend-chip.spotlight {
+  border-color: rgba(255, 138, 82, 0.35);
+}
+
+.challenge-card {
+  display: grid;
+  gap: 14px;
+}
+
+.toast-host {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + var(--safe-bottom));
+  display: grid;
+  gap: 12px;
+  z-index: 60;
+}
+
+.toast {
+  min-width: 260px;
+  max-width: 360px;
+  padding: 14px 18px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 220ms ease, transform 220ms ease;
+  backdrop-filter: blur(20px);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-success {
+  border-color: rgba(42, 143, 98, 0.32);
+}
+
+.toast-warning {
+  border-color: rgba(216, 169, 58, 0.36);
+}
+
+.toast-danger {
+  border-color: rgba(211, 93, 79, 0.36);
+}
+
+.admin-log-row {
+  font-size: 0.94rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  overflow-x: auto;
+  gap: 6px;
+  scrollbar-width: none;
+}
+
+.app-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.app-nav .app-link.active,
+.mobile-nav .app-link.active {
+  background: linear-gradient(135deg, rgba(255, 138, 82, 0.18), rgba(99, 165, 255, 0.16));
+}
+
+.comparison-stack {
+  margin-top: 12px;
+}
+
+@media (max-width: 1080px) {
+  .insights-hero-grid,
+  .insights-content-grid,
+  .planner-grid,
+  .admin-grid,
+  .friends-highlights-grid,
+  .lectures-support-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .marketing-panel,
+  .planner-day-card,
+  .analysis-row {
+    padding: 18px;
+  }
+
+  .streak-history-grid,
+  .plan-status-card,
+  .planner-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planner-metrics {
+    display: grid;
+  }
+
+  .lecture-support-row,
+  .analysis-row,
+  .planner-day-header,
+  .focus-utility-grid {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toast-host {
+    left: 12px;
+    right: 12px;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+}
