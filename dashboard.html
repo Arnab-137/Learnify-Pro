@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Learnify Pro Dashboard</title>
+  <title>Learnify Elite Dashboard</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,8 +15,8 @@
   <div class="app-shell">
     <header class="app-header view">
       <div class="app-brand">
-        <span class="eyebrow">Learnify Pro</span>
-        <strong>Learnify Pro</strong>
+        <span class="eyebrow">Learnify Elite</span>
+        <strong>Learnify Elite</strong>
       </div>
       <nav class="app-nav" aria-label="Primary">
         <a id="nav-dashboard" class="app-link active" href="dashboard.html">Dashboard</a>
@@ -35,11 +35,22 @@
 
     <section class="view page-view">
       <header class="topbar">
-        <div>
-            <span class="eyebrow">Dashboard</span>
-            <h2 id="dashboard-date-title">Overall progress</h2>
-            <p class="muted-text">Start with today’s focus, move to your next lecture, then enter deep work mode.</p>
+        <div class="topbar-copy">
+          <span class="eyebrow">Dashboard</span>
+          <h2 id="dashboard-date-title">Overall progress</h2>
+          <p class="muted-text">Start with today's focus, move to your next lecture, then enter deep work mode.</p>
         </div>
+        <article class="chart-card quote-card topbar-quote-card">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Daily Boost</span>
+              <h4>Motivation quote</h4>
+            </div>
+            <span class="status-pill">Free API</span>
+          </div>
+          <p id="dashboard-quote-text" class="quote-text">Loading your daily study quote...</p>
+          <p id="dashboard-quote-author" class="muted-text quote-author"></p>
+        </article>
       </header>
 
       <main class="single-panel-layout">
@@ -123,18 +134,6 @@
           </section>
 
           <section class="api-insights-grid">
-            <article class="chart-card quote-card">
-              <div class="section-heading">
-                <div>
-                  <span class="eyebrow">Daily Boost</span>
-                  <h4>Motivation quote</h4>
-                </div>
-                <span class="status-pill">Free API</span>
-              </div>
-              <p id="dashboard-quote-text" class="quote-text">Loading your daily study quote...</p>
-              <p id="dashboard-quote-author" class="muted-text quote-author"></p>
-            </article>
-
             <article class="chart-card">
               <div class="section-heading">
                 <div>
@@ -219,3 +218,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

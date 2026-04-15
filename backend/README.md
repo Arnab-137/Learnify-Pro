@@ -1,6 +1,6 @@
 # Study Tracker Backend
 
-Production-ready backend for the existing Study Tracker / Learnify Pro frontend.
+Production-ready backend for the existing Study Tracker / Learnify Elite frontend.
 
 ## Stack
 
@@ -242,3 +242,4 @@ Bearer <token>
 
 - Optional lecture video metadata enrichment
 - Thumbnail fallback works even without an API key for standard YouTube links
+

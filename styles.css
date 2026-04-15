@@ -309,6 +309,16 @@ input:focus-visible,
   padding: 14px 8px;
 }
 
+.topbar-copy {
+  min-width: 0;
+  flex: 1 1 520px;
+}
+
+.topbar-quote-card {
+  width: min(420px, 100%);
+  flex: 0 1 420px;
+}
+
 .topbar h2 {
   font-size: clamp(2rem, 3vw, 3rem);
 }

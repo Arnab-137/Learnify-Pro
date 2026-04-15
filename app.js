@@ -1482,7 +1482,7 @@ function renderDashboardEnhancements(enhancements) {
 
   const quote = enhancements.insights?.quote;
   quoteText.textContent = quote?.content || "Stay consistent. Small wins compound into major syllabus progress.";
-  quoteAuthor.textContent = quote?.author ? `— ${quote.author}` : "— Learnify Pro";
+  quoteAuthor.textContent = quote?.author ? `— ${quote.author}` : "— Learnify Elite";
 
   applyAnalyticsImage(weeklyImage, weeklyFallback, enhancements.weekly?.chartUrl, "Weekly completion chart");
   applyAnalyticsImage(subjectImage, subjectFallback, enhancements.subjects?.chartUrl, "Subject progress chart");
@@ -2584,3 +2584,4 @@ function bindCalendarNavigation(reloadPage) {
     };
   }
 }
+

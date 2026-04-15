@@ -1,7 +1,7 @@
 {
   "name": "study-tracker-backend",
   "version": "1.0.0",
-  "description": "Production-ready backend for Study Tracker / Learnify Pro",
+  "description": "Production-ready backend for Study Tracker / Learnify Elite",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
@@ -38,3 +38,4 @@
     "node": ">=18.0.0"
   }
 }
+
