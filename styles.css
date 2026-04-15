@@ -866,6 +866,12 @@ body[data-theme="dark"] .app-link:hover {
   position: absolute;
   top: -18px;
   left: -2px;
+  font-size: 0;
+  line-height: 1;
+}
+
+.quote-mark::before {
+  content: "\201C";
   font-family: var(--font-display);
   font-size: 3.3rem;
   line-height: 1;
@@ -888,6 +894,19 @@ body[data-theme="dark"] .app-link:hover {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.quote-author-block {
+  display: grid;
+  gap: 4px;
+}
+
+.quote-author-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(79, 70, 229, 0.72);
 }
 
 .quote-author {
@@ -2676,8 +2695,16 @@ body[data-theme="dark"] .quote-mark {
   color: rgba(129, 140, 248, 0.3);
 }
 
+body[data-theme="dark"] .quote-mark::before {
+  color: rgba(129, 140, 248, 0.3);
+}
+
 body[data-theme="dark"] .quote-text {
   color: rgba(248, 250, 252, 0.96);
+}
+
+body[data-theme="dark"] .quote-author-label {
+  color: rgba(165, 180, 252, 0.82);
 }
 
 body[data-theme="dark"] .quote-author {

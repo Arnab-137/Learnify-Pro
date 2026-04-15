@@ -1726,8 +1726,8 @@ function renderDashboardEnhancements(enhancements) {
   }
 
   const quote = enhancements.insights?.quote;
-  quoteText.textContent = quote?.content || "Stay consistent. Small wins compound into major syllabus progress.";
-  quoteAuthor.textContent = quote?.author ? quote.author : "Learnify Elite";
+  quoteText.textContent = quote?.content || "Success is the sum of small efforts, repeated day in and day out.";
+  quoteAuthor.textContent = quote?.author ? `- ${quote.author}` : "- Robert Collier";
   quoteSource.textContent = quote?.source || "Daily Quote";
 
   applyAnalyticsImage(weeklyImage, weeklyFallback, enhancements.weekly?.chartUrl, "Weekly completion chart");
