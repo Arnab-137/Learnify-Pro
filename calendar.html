@@ -23,7 +23,8 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="calendar">
-  <div class="app-shell">
+  <div data-barba="wrapper">
+  <div class="app-shell" data-barba="container" data-barba-namespace="calendar" data-page="calendar">
     <header class="app-header view">
       <div class="app-brand">
         <span class="eyebrow">Learnify Elite</span>
@@ -83,7 +84,8 @@
       </section>
     </section>
   </div>
-
+  </div>
+  <script src="https://unpkg.com/@barba/core"></script>
   <script src="analytics.js"></script>
   <script src="app.js"></script>
 </body>

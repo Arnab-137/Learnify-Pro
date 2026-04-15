@@ -47,10 +47,11 @@ const NAV_ITEMS = [
 
 const MOBILE_NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", href: "dashboard.html" },
-  { key: "insights", label: "Insights", href: "insights.html" },
-  { key: "planner", label: "Planner", href: "planner.html" },
+  { key: "subjects", label: "Subjects", href: "subjects.html" },
   { key: "lectures", label: "Lectures", href: "lectures.html" },
-  { key: "friends", label: "Friends", href: "friends.html" }
+  { key: "friends", label: "Friends", href: "friends.html" },
+  { key: "leaderboard", label: "Leaderboard", href: "leaderboard.html" },
+  { key: "settings", label: "Settings", href: "settings.html" }
 ];
 
 const seedSubjects = [
@@ -268,20 +269,26 @@ const state = {
   installPromptEvent: null
 };
 
+let sharedExperienceInitialized = false;
+
 document.addEventListener("DOMContentLoaded", async () => {
   initializeSharedExperience();
+  await bootstrapCurrentPage({ verifySession: true });
+});
+
+async function bootstrapCurrentPage({ verifySession = true } = {}) {
   const page = document.body.dataset.page;
 
   if (page === "auth") {
     await initAuthPage();
-    return;
+    return true;
   }
 
   state.currentUser = getSessionUser() || await hydrateCurrentUser();
 
   if (!state.currentUser) {
     window.location.href = "index.html";
-    return;
+    return false;
   }
 
   if (!state.calendarMonth) {
@@ -293,57 +300,62 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderAppFrame();
-  void verifyCurrentUserSession();
+  if (verifySession) {
+    void verifyCurrentUserSession();
+  }
 
   if (page === "dashboard") {
     await initDashboardPage();
-    return;
+    return true;
   }
 
   if (page === "insights") {
     await initInsightsPage();
-    return;
+    return true;
   }
 
   if (page === "planner") {
     await initPlannerPage();
-    return;
+    return true;
   }
 
   if (page === "calendar") {
     await initCalendarPage();
-    return;
+    return true;
   }
 
   if (page === "subjects") {
     await initSubjectsPage();
-    return;
+    return true;
   }
 
   if (page === "friends") {
     await initFriendsPage();
-    return;
+    return true;
   }
 
   if (page === "leaderboard") {
     await initLeaderboardPage();
-    return;
+    return true;
   }
 
   if (page === "lectures") {
     await initLecturesPage();
-    return;
+    return true;
   }
 
   if (page === "settings") {
     initSettingsPage();
-    return;
+    return true;
   }
 
   if (page === "admin") {
     await initAdminPage();
+    return true;
   }
-});
+
+  return true;
+}
 
 function readStorage(key, fallback) {
   try {
@@ -471,12 +483,17 @@ function wait(milliseconds) {
 }
 
 function initializeSharedExperience() {
+  if (sharedExperienceInitialized) {
+    return;
+  }
+  sharedExperienceInitialized = true;
   ensureToastHost();
   ensurePageTransitionVeil();
   ensureSkipLink();
   enhanceStatusAccessibility();
   bindInstallPromptUi();
   registerServiceWorker();
+  initBarbaTransitions();
   showQueuedToasts();
   decorateEmptyStates();
 }
@@ -2478,6 +2495,89 @@ function bindPageTransitions() {
       const veil = document.getElementById("page-transition-veil");
       veil?.classList.add("visible");
     });
+  });
+}
+
+function initBarbaTransitions() {
+  if (window.location.protocol === "file:" || !window.barba || window.__learnifyBarbaInitialized || !document.querySelector("[data-barba='wrapper']")) {
+    return;
+  }
+
+  window.__learnifyBarbaInitialized = true;
+
+  window.barba.init({
+    preventRunning: true,
+    transitions: [
+      {
+        name: "learnify-fade-slide",
+        async leave(data) {
+          document.body.classList.add("is-transitioning");
+          const veil = document.getElementById("page-transition-veil");
+          veil?.classList.add("visible");
+          data.current.container.classList.add("barba-leave-active");
+          await wait(240);
+        },
+        async enter(data) {
+          syncBarbaPageState(data.next);
+          data.next.container.classList.add("barba-enter-active");
+          await bootstrapCurrentPage({ verifySession: false });
+          requestAnimationFrame(() => {
+            document.body.classList.remove("is-transitioning");
+            const veil = document.getElementById("page-transition-veil");
+            veil?.classList.remove("visible");
+          });
+          await wait(360);
+          window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        },
+        async once() {
+          document.body.classList.remove("is-transitioning");
+          const veil = document.getElementById("page-transition-veil");
+          veil?.classList.remove("visible");
+        }
+      }
+    ]
+  });
+}
+
+function syncBarbaPageState(next) {
+  const parser = new DOMParser();
+  const nextDocument = parser.parseFromString(next.html, "text/html");
+  document.body.dataset.page = next.container.dataset.page || nextDocument.body.dataset.page || "dashboard";
+  document.title = nextDocument.title;
+  state.reactInsightsRequested = false;
+  closeFocusMode();
+
+  const canonical = document.querySelector("link[rel='canonical']");
+  const nextCanonical = nextDocument.querySelector("link[rel='canonical']");
+  if (canonical && nextCanonical) {
+    canonical.href = nextCanonical.href;
+  }
+
+  const themeColor = document.querySelector("meta[name='theme-color']");
+  const nextThemeColor = nextDocument.querySelector("meta[name='theme-color']");
+  if (themeColor && nextThemeColor) {
+    themeColor.setAttribute("content", nextThemeColor.getAttribute("content") || "");
+  }
+
+  const metaSelectors = [
+    "meta[name='description']",
+    "meta[name='robots']",
+    "meta[property='og:title']",
+    "meta[property='og:description']",
+    "meta[property='og:url']",
+    "meta[name='twitter:title']",
+    "meta[name='twitter:description']"
+  ];
+
+  metaSelectors.forEach((selector) => {
+    const currentNode = document.querySelector(selector);
+    const nextNode = nextDocument.querySelector(selector);
+    if (currentNode && nextNode) {
+      const content = nextNode.getAttribute("content");
+      if (content !== null) {
+        currentNode.setAttribute("content", content);
+      }
+    }
   });
 }
 

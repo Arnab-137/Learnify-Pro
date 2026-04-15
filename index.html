@@ -40,7 +40,8 @@
   </script>
 </head>
 <body data-page="auth">
-  <div class="app-shell">
+  <div data-barba="wrapper">
+  <div class="app-shell" data-barba="container" data-barba-namespace="auth" data-page="auth">
     <section class="view auth-view">
       <div class="auth-layout">
         <div class="hero-panel">
@@ -163,7 +164,8 @@
       </section>
     </section>
   </div>
-
+  </div>
+  <script src="https://unpkg.com/@barba/core"></script>
   <script src="analytics.js"></script>
   <script src="app.js"></script>
 </body>
