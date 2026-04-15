@@ -1753,21 +1753,21 @@ body.is-transitioning .view {
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 24px;
   background: rgba(14, 14, 14, 0.58);
   backdrop-filter: blur(16px);
 }
 
 .focus-mode-panel {
-  width: min(780px, calc(100vw - 28px));
-  max-height: min(84vh, 760px);
-  padding: 18px;
-  border-radius: 28px;
+  width: min(720px, calc(100vw - 56px));
+  height: min(620px, calc(100vh - 56px));
+  padding: 16px 16px 14px;
+  border-radius: 26px;
   position: relative;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  gap: 14px;
+  gap: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 243, 0.72)),
     var(--panel-strong);
@@ -1798,38 +1798,32 @@ body.is-transitioning .view {
 .focus-mode-header {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  padding-bottom: 4px;
-  background: inherit;
 }
 
 .focus-grid {
   align-items: stretch;
   display: grid;
-  grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.08fr);
-  gap: 16px;
+  grid-template-columns: minmax(240px, 0.94fr) minmax(0, 1.06fr);
+  gap: 12px;
   min-height: 0;
-  overflow: auto;
-  padding-right: 4px;
+  overflow: hidden;
 }
 
 .focus-timer-card,
 .focus-notes-card {
-  padding: 16px;
-  border-radius: 22px;
+  padding: 14px;
+  border-radius: 20px;
   background: var(--panel-alt);
   border: 1px solid var(--line);
   display: grid;
-  gap: 12px;
+  gap: 10px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .focus-timer-card strong {
-  font-size: clamp(2.15rem, 4vw, 3.1rem);
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
   letter-spacing: -0.05em;
 }
 
@@ -1871,35 +1865,31 @@ body.is-transitioning .view {
 }
 
 .focus-notes {
-  min-height: 120px;
-  max-height: 180px;
-  resize: vertical;
+  min-height: 96px;
+  max-height: 96px;
+  resize: none;
 }
 
 .focus-checklist-shell {
-  max-height: 180px;
-  overflow: auto;
+  max-height: 116px;
+  overflow: hidden;
 }
 
 .focus-history-shell {
-  max-height: 132px;
-  overflow: auto;
+  max-height: 84px;
+  overflow: hidden;
+  margin-top: 0;
 }
 
 .focus-mode-panel > .action-card-actions:last-child {
-  position: sticky;
-  bottom: 0;
   margin-top: 0;
-  padding-top: 10px;
-  padding-bottom: 2px;
-  background:
-    linear-gradient(180deg, rgba(255, 250, 243, 0), rgba(255, 250, 243, 0.92) 34%);
+  padding-top: 2px;
+  padding-bottom: 0;
   z-index: 2;
 }
 
 body[data-theme="dark"] .focus-mode-panel > .action-card-actions:last-child {
-  background:
-    linear-gradient(180deg, rgba(10, 18, 27, 0), rgba(10, 18, 27, 0.94) 34%);
+  background: transparent;
 }
 
 body.focus-active .app-sidebar,
@@ -2787,27 +2777,27 @@ body[data-theme="dark"]::after {
   }
 
   .focus-mode {
-    padding: 10px;
-    align-items: end;
+    padding: 16px;
+    place-items: center;
   }
 
   .focus-mode-panel {
-    width: 100%;
-    max-height: calc(100vh - 20px);
-    padding: 16px;
-    border-radius: 24px 24px 18px 18px;
+    width: min(100%, 420px);
+    height: min(560px, calc(100vh - 32px));
+    padding: 14px;
+    border-radius: 24px;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     overflow: hidden;
   }
 
   .focus-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
   .focus-notes {
-    min-height: 100px;
-    max-height: 140px;
+    min-height: 88px;
+    max-height: 88px;
   }
 
   .weekly-chart {
