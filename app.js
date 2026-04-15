@@ -279,6 +279,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function bootstrapCurrentPage({ verifySession = true } = {}) {
   const page = document.body.dataset.page;
 
+  if (page !== "lectures") {
+    closeFocusMode();
+  }
+
   if (page === "auth") {
     await initAuthPage();
     return true;
@@ -2545,6 +2549,7 @@ function syncBarbaPageState(next) {
   document.body.dataset.page = next.container.dataset.page || nextDocument.body.dataset.page || "dashboard";
   document.title = nextDocument.title;
   state.reactInsightsRequested = false;
+  document.body.classList.remove("focus-active");
   closeFocusMode();
 
   const canonical = document.querySelector("link[rel='canonical']");
@@ -2933,9 +2938,23 @@ function openFocusMode(lecture, subject) {
 
 function closeFocusMode() {
   const focus = document.getElementById("focus-mode");
-  if (!focus) return;
-  focus.classList.add("hidden");
   document.body.classList.remove("focus-active");
+  if (focus) {
+    focus.classList.add("hidden");
+  }
+  if (focusTimerInterval) {
+    clearInterval(focusTimerInterval);
+    focusTimerInterval = null;
+  }
+  focusBreakMode = false;
+  const button = document.getElementById("focus-timer-toggle");
+  if (button) {
+    button.textContent = "Start Timer";
+  }
+  const breakButton = document.getElementById("focus-break-toggle");
+  if (breakButton) {
+    breakButton.textContent = "Start 10 min break";
+  }
   stopAmbientSound();
 }
 
