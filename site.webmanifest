@@ -1,0 +1,16 @@
+{
+  "name": "Learnify Elite",
+  "short_name": "Learnify Elite",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Learnify Elite is a study tracker for lectures, syllabus completion, focus sessions, and progress monitoring.",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
