@@ -71,12 +71,12 @@ if (process.env.NODE_ENV !== "production") {
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    message: "Too many authentication attempts. Please try again later."
+    message: "Too many authentication attempts. Please wait a few minutes and try again."
   }
 });
 
