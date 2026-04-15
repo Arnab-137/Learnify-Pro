@@ -1,0 +1,23 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "This workspace now contains:",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arnab-137/Learnify-Pro.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Arnab-137/Learnify-Pro/issues"
+  },
+  "homepage": "https://github.com/Arnab-137/Learnify-Pro#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
