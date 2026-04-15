@@ -227,7 +227,8 @@ const state = {
   selectedDate: null,
   currentSubjects: [],
   currentLectures: [],
-  currentCompletions: []
+  currentCompletions: [],
+  hasStudyData: false
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -332,7 +333,14 @@ function getAuthToken() {
   return getStoredSession()?.token || null;
 }
 
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
 async function apiRequest(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {})
@@ -343,31 +351,48 @@ async function apiRequest(path, options = {}) {
   }
 
   const requestUrl = `${getApiBaseUrl()}${path}`;
-  let response;
-  try {
-    response = await fetch(requestUrl, {
-      ...options,
-      headers
-    });
-  } catch (error) {
-    throw new Error(`Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`);
-  }
+  const retryableStatuses = new Set([502, 503, 504]);
+  const maxAttempts = method === "GET" ? 3 : 1;
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch (error) {
-    payload = null;
-  }
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        ...options,
+        headers
+      });
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        await wait(450 * attempt);
+        continue;
+      }
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearSession();
+      const networkError = new Error(`Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`);
+      networkError.isNetworkError = true;
+      throw networkError;
     }
-    throw new Error(payload?.message || "Request failed.");
-  }
 
-  return payload;
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      if (attempt < maxAttempts && retryableStatuses.has(response.status)) {
+        await wait(450 * attempt);
+        continue;
+      }
+
+      const requestError = new Error(payload?.message || "Request failed.");
+      requestError.status = response.status;
+      requestError.payload = payload;
+      throw requestError;
+    }
+
+    return payload;
+  }
 }
 
 async function hydrateCurrentUser() {
@@ -385,8 +410,12 @@ async function hydrateCurrentUser() {
     });
     return user;
   } catch (error) {
-    clearSession();
-    return null;
+    if (error?.status === 401) {
+      clearSession();
+      return null;
+    }
+
+    return normalizeUser(session.user);
   }
 }
 
@@ -438,26 +467,55 @@ function normalizeLecture(rawLecture) {
   };
 }
 
-async function loadStudyData() {
-  const subjectResponse = await apiRequest("/subjects");
-  const subjectRows = subjectResponse.data || [];
-  const subjects = subjectRows.map((subject) => ({
-    id: subject.id || subject._id,
-    name: subject.name,
-    totalLectures: subject.totalLectures || 0,
-    completedLectures: subject.completedLectures || 0,
-    progressPercentage: subject.progressPercentage || 0,
-    lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
-    playlists: []
-  }));
+async function loadStudyData(force = false) {
+  if (!force && state.hasStudyData) {
+    return {
+      subjects: state.currentSubjects,
+      lectures: state.currentLectures,
+      userCompletions: state.currentCompletions
+    };
+  }
 
-  const lectureResponses = await Promise.all(
-    subjects.map((subject) => apiRequest(`/subjects/${subject.id}/lectures`))
-  );
+  let subjects = [];
+  let lectures = [];
 
-  const lectures = lectureResponses.flatMap((response) =>
-    (response.data?.lectures || []).map(normalizeLecture)
-  );
+  try {
+    const bundleResponse = await apiRequest("/subjects/bundle");
+    const bundleSubjects = bundleResponse.data?.subjects || [];
+    const bundleLectures = bundleResponse.data?.lectures || [];
+
+    subjects = bundleSubjects.map((subject) => ({
+      id: subject.id || subject._id,
+      name: subject.name,
+      totalLectures: subject.totalLectures || 0,
+      completedLectures: subject.completedLectures || 0,
+      progressPercentage: subject.progressPercentage || 0,
+      lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
+      playlists: []
+    }));
+
+    lectures = bundleLectures.map(normalizeLecture);
+  } catch (error) {
+    const subjectResponse = await apiRequest("/subjects");
+    const subjectRows = subjectResponse.data || [];
+    subjects = subjectRows.map((subject) => ({
+      id: subject.id || subject._id,
+      name: subject.name,
+      totalLectures: subject.totalLectures || 0,
+      completedLectures: subject.completedLectures || 0,
+      progressPercentage: subject.progressPercentage || 0,
+      lastStudiedAt: normalizeDateValue(subject.lastStudiedAt),
+      playlists: []
+    }));
+
+    const lectureResponses = await Promise.all(
+      subjects.map((subject) => apiRequest(`/subjects/${subject.id}/lectures`))
+    );
+
+    lectures = lectureResponses.flatMap((response) =>
+      (response.data?.lectures || []).map(normalizeLecture)
+    );
+  }
 
   subjects.forEach((subject) => {
     subject.playlists = buildSubjectPlaylists(subject.id, lectures);
@@ -474,6 +532,7 @@ async function loadStudyData() {
   state.currentSubjects = subjects;
   state.currentLectures = lectures;
   state.currentCompletions = completions;
+  state.hasStudyData = true;
 
   return {
     subjects,
@@ -600,10 +659,11 @@ function renderAppFrame() {
   bindPageTransitions();
 }
 
-async function initDashboardPage() {
-  const { lectures, subjects, userCompletions } = await loadStudyData();
+async function initDashboardPage(force = false) {
+  const { lectures, subjects, userCompletions } = await loadStudyData(force);
   renderStats(lectures, userCompletions);
   renderNextAction(lectures, subjects, userCompletions);
+  publishDashboardInsights(lectures, subjects, userCompletions);
   renderCalendar(lectures, subjects, {
     onDateSelect: (date) => {
       state.selectedDate = date;
@@ -616,8 +676,8 @@ async function initDashboardPage() {
   bindCalendarNavigation(initDashboardPage);
 }
 
-async function initCalendarPage() {
-  const { lectures, subjects } = await loadStudyData();
+async function initCalendarPage(force = false) {
+  const { lectures, subjects } = await loadStudyData(force);
 
   renderCalendar(lectures, subjects, {
     onDateSelect: (date) => {
@@ -632,8 +692,8 @@ async function initCalendarPage() {
   bindCalendarNavigation(initCalendarPage);
 }
 
-async function initSubjectsPage() {
-  const { lectures, subjects, userCompletions } = await loadStudyData();
+async function initSubjectsPage(force = false) {
+  const { lectures, subjects, userCompletions } = await loadStudyData(force);
   renderSubjects(subjects, lectures, userCompletions, true);
 }
 
@@ -645,8 +705,8 @@ async function initLeaderboardPage() {
   await renderLeaderboardPanel();
 }
 
-async function initLecturesPage() {
-  const { lectures, subjects, userCompletions } = await loadStudyData();
+async function initLecturesPage(force = false) {
+  const { lectures, subjects, userCompletions } = await loadStudyData(force);
   const selectedSubjectId = getQueryParam("subject");
   const selectedDate = getQueryParam("date");
   const focusModeRequested = getQueryParam("focus") === "1";
@@ -696,11 +756,75 @@ function initSettingsPage() {
 
 function logout() {
   clearSession();
+  state.currentSubjects = [];
+  state.currentLectures = [];
+  state.currentCompletions = [];
+  state.hasStudyData = false;
   window.location.href = "index.html";
 }
 
 function getCurrentUser() {
   return getStoredSession()?.user || null;
+}
+
+function publishDashboardInsights(lectures, subjects, userCompletions) {
+  const root = document.getElementById("react-productivity-root");
+  if (!root) {
+    return;
+  }
+
+  const todayKey = getLocalDateKey(new Date());
+  const completedLectureIds = new Set(
+    userCompletions.filter((completion) => completion.completed).map((completion) => completion.lectureId)
+  );
+  const nextLecture = getNextLecture(lectures, userCompletions);
+  const todaysLectures = lectures.filter((lecture) => lecture.date === todayKey);
+  const overdueLectures = lectures.filter((lecture) => lecture.date < todayKey && !completedLectureIds.has(lecture.id));
+  const completedCount = userCompletions.filter((completion) => completion.completed).length;
+
+  window.dispatchEvent(
+    new CustomEvent("learnify:dashboard-insights", {
+      detail: {
+        user: state.currentUser,
+        completionRate: lectures.length ? Math.round((completedCount / lectures.length) * 100) : 0,
+        streak: getStreakCount(userCompletions),
+        nextLecture: nextLecture
+          ? {
+              id: nextLecture.id,
+              title: nextLecture.title,
+              subjectId: nextLecture.subjectId,
+              subjectName: subjects.find((subject) => subject.id === nextLecture.subjectId)?.name || "Subject",
+              date: nextLecture.date,
+              lectureNumber: nextLecture.lectureNumber
+            }
+          : null,
+        todaysLectures: todaysLectures.map((lecture) => ({
+          id: lecture.id,
+          title: lecture.title,
+          subjectId: lecture.subjectId,
+          subjectName: subjects.find((subject) => subject.id === lecture.subjectId)?.name || "Subject",
+          date: lecture.date,
+          lectureNumber: lecture.lectureNumber,
+          isCompleted: completedLectureIds.has(lecture.id)
+        })),
+        overdueLectures: overdueLectures.slice(0, 4).map((lecture) => ({
+          id: lecture.id,
+          title: lecture.title,
+          subjectId: lecture.subjectId,
+          subjectName: subjects.find((subject) => subject.id === lecture.subjectId)?.name || "Subject",
+          date: lecture.date,
+          lectureNumber: lecture.lectureNumber
+        })),
+        subjectSnapshots: subjects.map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+          progressPercentage: subject.progressPercentage || 0,
+          completedLectures: subject.completedLectures || 0,
+          totalLectures: subject.totalLectures || 0
+        }))
+      }
+    })
+  );
 }
 
 function getUserDisplayName(user) {
@@ -1524,7 +1648,7 @@ async function upsertCompletion(lectureId, completed) {
         completed
       })
     });
-    await refreshCurrentPage();
+    await refreshCurrentPage(true);
   } catch (error) {
     console.error(error);
   }
@@ -1606,21 +1730,21 @@ function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-async function refreshCurrentPage() {
+async function refreshCurrentPage(force = false) {
   const page = document.body.dataset.page;
 
   if (page === "dashboard") {
-    await initDashboardPage();
+    await initDashboardPage(force);
     return;
   }
 
   if (page === "calendar") {
-    await initCalendarPage();
+    await initCalendarPage(force);
     return;
   }
 
   if (page === "subjects") {
-    await initSubjectsPage();
+    await initSubjectsPage(force);
     return;
   }
 
@@ -1635,7 +1759,7 @@ async function refreshCurrentPage() {
   }
 
   if (page === "lectures") {
-    await initLecturesPage();
+    await initLecturesPage(force);
     return;
   }
 

@@ -5,7 +5,6 @@ const Lecture = require("../models/Lecture");
 const Completion = require("../models/Completion");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
-const { fetchYouTubeMetadata } = require("../services/youtubeService");
 const { startOfDay, addDays } = require("../utils/dateTime");
 const escapeRegex = require("../utils/escapeRegex");
 
@@ -123,14 +122,7 @@ const getLecturesBySubject = asyncHandler(async (req, res) => {
     completionDocs.map((item) => [String(item.lecture), item])
   );
 
-  const lectureWithMedia = await Promise.all(
-    lectures.map(async (lecture) => ({
-      lecture,
-      media: await fetchYouTubeMetadata(lecture.youtubeLink)
-    }))
-  );
-
-  const data = lectureWithMedia.map(({ lecture, media }) => {
+  const data = lectures.map((lecture) => {
     const completion = completionMap.get(String(lecture._id));
     return {
       id: lecture._id,
@@ -140,9 +132,6 @@ const getLecturesBySubject = asyncHandler(async (req, res) => {
         name: lecture.subject.name
       },
       youtubeLink: lecture.youtubeLink,
-      videoTitle: media.title,
-      thumbnailUrl: media.thumbnailUrl,
-      videoId: media.videoId,
       date: lecture.date,
       lectureNumber: lecture.lectureNumber,
       isCompleted: Boolean(completion?.completed),
@@ -163,7 +152,96 @@ const getLecturesBySubject = asyncHandler(async (req, res) => {
   });
 });
 
+const getStudyBundle = asyncHandler(async (req, res) => {
+  const [subjects, lectures, completionDocs] = await Promise.all([
+    Subject.find().sort({ name: 1 }).lean(),
+    Lecture.find().sort({ date: 1, lectureNumber: 1 }).lean(),
+    Completion.find({ user: req.user._id, completed: true }).lean()
+  ]);
+
+  const subjectMap = new Map(
+    subjects.map((subject) => [
+      String(subject._id),
+      {
+        id: subject._id,
+        name: subject.name
+      }
+    ])
+  );
+
+  const lectureMap = new Map();
+  const totalBySubject = new Map();
+
+  lectures.forEach((lecture) => {
+    lectureMap.set(String(lecture._id), lecture);
+    const subjectKey = String(lecture.subject);
+    totalBySubject.set(subjectKey, (totalBySubject.get(subjectKey) || 0) + 1);
+  });
+
+  const completedBySubject = new Map();
+  const lastStudiedBySubject = new Map();
+  const completionMap = new Map();
+
+  completionDocs.forEach((completion) => {
+    completionMap.set(String(completion.lecture), completion);
+    const lecture = lectureMap.get(String(completion.lecture));
+    if (!lecture) {
+      return;
+    }
+
+    const subjectKey = String(lecture.subject);
+    completedBySubject.set(subjectKey, (completedBySubject.get(subjectKey) || 0) + 1);
+
+    const previousDate = lastStudiedBySubject.get(subjectKey);
+    if (!previousDate || new Date(completion.completedAt) > new Date(previousDate)) {
+      lastStudiedBySubject.set(subjectKey, completion.completedAt);
+    }
+  });
+
+  const subjectData = subjects.map((subject) => {
+    const subjectKey = String(subject._id);
+    const totalLectures = totalBySubject.get(subjectKey) || 0;
+    const completedLectures = completedBySubject.get(subjectKey) || 0;
+    return {
+      id: subject._id,
+      name: subject.name,
+      totalLectures,
+      completedLectures,
+      progressPercentage: totalLectures
+        ? Number(((completedLectures / totalLectures) * 100).toFixed(2))
+        : 0,
+      lastStudiedAt: lastStudiedBySubject.get(subjectKey) || null,
+      createdAt: subject.createdAt,
+      updatedAt: subject.updatedAt
+    };
+  });
+
+  const lectureData = lectures.map((lecture) => {
+    const completion = completionMap.get(String(lecture._id));
+    return {
+      id: lecture._id,
+      title: lecture.title,
+      subject: subjectMap.get(String(lecture.subject)) || null,
+      youtubeLink: lecture.youtubeLink,
+      date: lecture.date,
+      lectureNumber: lecture.lectureNumber,
+      isCompleted: Boolean(completion?.completed),
+      completedAt: completion?.completedAt || null
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Study data fetched successfully.",
+    data: {
+      subjects: subjectData,
+      lectures: lectureData
+    }
+  });
+});
+
 module.exports = {
   getSubjects,
-  getLecturesBySubject
+  getLecturesBySubject,
+  getStudyBundle
 };
