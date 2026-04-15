@@ -7,11 +7,13 @@ const STORAGE_KEYS = {
   apiBaseUrl: "study-tracker-api-base-url"
 };
 
+const LIVE_API_BASE_URL = "https://learnify-pro.onrender.com/api";
+
 const DEFAULT_API_BASE_URL = (() => {
   if (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     return "http://localhost:5000/api";
   }
-  return `${window.location.origin}/api`;
+  return LIVE_API_BASE_URL;
 })();
 
 const ESTIMATED_LECTURE_MINUTES = 45;
