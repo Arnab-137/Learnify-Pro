@@ -1760,11 +1760,14 @@ body.is-transitioning .view {
 
 .focus-mode-panel {
   width: min(780px, calc(100vw - 28px));
-  max-height: min(88vh, 860px);
-  padding: 20px;
+  max-height: min(84vh, 760px);
+  padding: 18px;
   border-radius: 28px;
   position: relative;
-  overflow: auto;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 243, 0.72)),
     var(--panel-strong);
@@ -1797,6 +1800,11 @@ body.is-transitioning .view {
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding-bottom: 4px;
+  background: inherit;
 }
 
 .focus-grid {
@@ -1804,6 +1812,9 @@ body.is-transitioning .view {
   display: grid;
   grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.08fr);
   gap: 16px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .focus-timer-card,
@@ -1860,26 +1871,27 @@ body.is-transitioning .view {
 }
 
 .focus-notes {
-  min-height: 140px;
-  max-height: 220px;
+  min-height: 120px;
+  max-height: 180px;
   resize: vertical;
 }
 
 .focus-checklist-shell {
-  max-height: 220px;
+  max-height: 180px;
   overflow: auto;
 }
 
 .focus-history-shell {
-  max-height: 180px;
+  max-height: 132px;
   overflow: auto;
 }
 
 .focus-mode-panel > .action-card-actions:last-child {
   position: sticky;
   bottom: 0;
-  padding-top: 12px;
-  padding-bottom: 4px;
+  margin-top: 0;
+  padding-top: 10px;
+  padding-bottom: 2px;
   background:
     linear-gradient(180deg, rgba(255, 250, 243, 0), rgba(255, 250, 243, 0.92) 34%);
   z-index: 2;
@@ -2782,18 +2794,20 @@ body[data-theme="dark"]::after {
   .focus-mode-panel {
     width: 100%;
     max-height: calc(100vh - 20px);
-    padding: 18px;
+    padding: 16px;
     border-radius: 24px 24px 18px 18px;
-    overflow: auto;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    overflow: hidden;
   }
 
   .focus-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .focus-notes {
-    min-height: 120px;
-    max-height: 180px;
+    min-height: 100px;
+    max-height: 140px;
   }
 
   .weekly-chart {
