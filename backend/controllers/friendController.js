@@ -176,6 +176,47 @@ const rejectFriendRequest = asyncHandler(async (req, res) => {
   });
 });
 
+const removeFriend = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user id.");
+  }
+
+  if (String(userId) === String(req.user._id)) {
+    throw new ApiError(400, "You cannot remove yourself.");
+  }
+
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(req.user._id),
+    User.findById(userId)
+  ]);
+
+  if (!targetUser) {
+    throw new ApiError(404, "Friend not found.");
+  }
+
+  const wasFriend = currentUser.friends.some((id) => String(id) === String(userId));
+  if (!wasFriend) {
+    throw new ApiError(400, "This user is not currently in your friends list.");
+  }
+
+  currentUser.friends = currentUser.friends.filter((id) => String(id) !== String(userId));
+  targetUser.friends = targetUser.friends.filter((id) => String(id) !== String(currentUser._id));
+
+  currentUser.friendRequestsSent = currentUser.friendRequestsSent.filter((id) => String(id) !== String(userId));
+  currentUser.friendRequestsReceived = currentUser.friendRequestsReceived.filter((id) => String(id) !== String(userId));
+  targetUser.friendRequestsSent = targetUser.friendRequestsSent.filter((id) => String(id) !== String(currentUser._id));
+  targetUser.friendRequestsReceived = targetUser.friendRequestsReceived.filter((id) => String(id) !== String(currentUser._id));
+
+  await Promise.all([currentUser.save(), targetUser.save()]);
+
+  res.status(200).json({
+    success: true,
+    message: "Friend removed successfully."
+  });
+});
+
 const listFriends = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).populate("friends", "name email createdAt");
 
@@ -222,6 +263,7 @@ module.exports = {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  removeFriend,
   listFriends,
   getFriendRequests
 };

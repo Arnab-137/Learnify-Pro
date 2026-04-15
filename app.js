@@ -1384,7 +1384,15 @@ async function renderFriendsPanel() {
             <span class="muted-text">${friend.email}</span>
           </div>
         </div>
+        <div class="friend-chip-meta">
+          <button class="ghost-button danger remove-friend" type="button">Delete Friend</button>
+        </div>
       `;
+      card.querySelector(".remove-friend").onclick = async () => {
+        await apiRequest(`/friends/${friend.id}`, { method: "DELETE" });
+        showToast(`${friend.name} was removed from your friends list.`, "success");
+        await loadFriendsData();
+      };
       container.appendChild(card);
     });
   };
