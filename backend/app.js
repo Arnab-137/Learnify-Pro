@@ -25,12 +25,20 @@ function isLocalDevOrigin(origin = "") {
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 }
 
+function isAllowedVercelOrigin(origin = "") {
+  return /^https:\/\/learnify-pro(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
+}
+
 function isAllowedOrigin(origin) {
   if (!origin) {
     return true;
   }
 
   if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  if (isAllowedVercelOrigin(origin)) {
     return true;
   }
 
