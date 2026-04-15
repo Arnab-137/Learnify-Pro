@@ -120,10 +120,6 @@ select:focus-visible,
   display: none !important;
 }
 
-.is-gsap-hidden {
-  opacity: 0;
-}
-
 .app-shell {
   min-height: 100vh;
   padding: 24px;

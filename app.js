@@ -2695,9 +2695,6 @@ function applyGsapEnhancements() {
   clearGsapEnhancements();
 
   if (prefersReducedMotion() || !window.gsap) {
-    document.querySelectorAll(".is-gsap-hidden").forEach((node) => {
-      node.classList.remove("is-gsap-hidden");
-    });
     return;
   }
 
@@ -2710,7 +2707,6 @@ function applyGsapEnhancements() {
   }
 
   const heroNodes = document.querySelectorAll(".app-header, .topbar, .auth-card, .hero-panel, .summary-header");
-  heroNodes.forEach((node) => node.classList.add("is-gsap-hidden"));
   if (heroNodes.length) {
     gsap.fromTo(
       heroNodes,
@@ -2746,7 +2742,6 @@ function applyGsapEnhancements() {
 
   revealSelectors.forEach((selector) => {
     document.querySelectorAll(selector).forEach((node, index) => {
-      node.classList.add("is-gsap-hidden");
       if (ScrollTrigger) {
         const tween = gsap.fromTo(
           node,
