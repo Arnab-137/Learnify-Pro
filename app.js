@@ -647,9 +647,53 @@ function getAvatarTheme(user) {
   return themes[hash % themes.length];
 }
 
+function getAvatarPalette(theme) {
+  const palettes = {
+    nebula: {
+      background: ["0b1023", "1a1742", "2e1065"],
+      shapes: ["f472b6", "c084fc", "7dd3fc"]
+    },
+    planet: {
+      background: ["071226", "12315f", "32215d"],
+      shapes: ["67e8f9", "fcd34d", "c4b5fd"]
+    },
+    comet: {
+      background: ["08111f", "102a43", "1e3a5f"],
+      shapes: ["e2e8f0", "7dd3fc", "f9a8d4"]
+    },
+    nova: {
+      background: ["140d1f", "35173b", "5b1f4e"],
+      shapes: ["fde68a", "fb7185", "c084fc"]
+    },
+    orbit: {
+      background: ["081225", "17315a", "1d4ed8"],
+      shapes: ["60a5fa", "22d3ee", "e9d5ff"]
+    },
+    lunar: {
+      background: ["111827", "1f2937", "334155"],
+      shapes: ["e2e8f0", "93c5fd", "f8fafc"]
+    }
+  };
+
+  return palettes[theme] || palettes.orbit;
+}
+
 function getAvatarUrlForUser(user) {
+  const theme = getAvatarTheme(user);
+  const palette = getAvatarPalette(theme);
   const seed = encodeURIComponent(getAvatarSeed(user));
-  return `https://api.dicebear.com/7.x/identicon/svg?seed=${seed}`;
+  const params = new URLSearchParams({
+    seed,
+    size: "128",
+    radius: "50",
+    scale: "92",
+    backgroundType: "solid",
+    backgroundColor: palette.background.join(","),
+    shape1Color: palette.shapes.join(","),
+    shape2Color: palette.shapes.slice().reverse().join(","),
+    shape3Color: [palette.shapes[1], palette.shapes[2], palette.shapes[0]].join(",")
+  });
+  return `https://api.dicebear.com/7.x/identicon/svg?${params.toString()}`;
 }
 
 function buildAvatarMarkup(user, label) {
