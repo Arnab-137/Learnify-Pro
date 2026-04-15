@@ -37,14 +37,12 @@ const DATA_SEED_VERSION = 6;
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", href: "dashboard.html" },
-  { key: "insights", label: "Insights", href: "insights.html" },
   { key: "planner", label: "Planner", href: "planner.html" },
   { key: "subjects", label: "Subjects", href: "subjects.html" },
   { key: "lectures", label: "Lectures", href: "lectures.html" },
   { key: "focus", label: "Focus Mode", href: "lectures.html?focus=1" },
   { key: "friends", label: "Friends", href: "friends.html" },
   { key: "leaderboard", label: "Leaderboard", href: "leaderboard.html" },
-  { key: "admin", label: "Admin", href: "admin.html" },
   { key: "settings", label: "Settings", href: "settings.html" }
 ];
 
