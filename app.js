@@ -631,13 +631,37 @@ function normalizeUser(user) {
   };
 }
 
-function getAvatarUrlForUser(user) {
-  if (user?.avatarUrl) {
-    return user.avatarUrl;
-  }
+function getAvatarSeed(user) {
+  return `${user?.id || user?._id || ""}:${user?.name || ""}:${user?.email || "Learner"}`;
+}
 
-  const seed = encodeURIComponent(user?.name || user?.email || "Learner");
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
+function hashAvatarSeed(seed) {
+  return Array.from(seed).reduce((total, character) => {
+    return ((total << 5) - total + character.charCodeAt(0)) | 0;
+  }, 0);
+}
+
+function getAvatarTheme(user) {
+  const themes = ["nebula", "planet", "comet", "nova", "orbit", "lunar"];
+  const hash = Math.abs(hashAvatarSeed(getAvatarSeed(user)));
+  return themes[hash % themes.length];
+}
+
+function getAvatarUrlForUser(user) {
+  const seed = encodeURIComponent(getAvatarSeed(user));
+  return `https://api.dicebear.com/7.x/identicon/svg?seed=${seed}`;
+}
+
+function buildAvatarMarkup(user, label) {
+  const theme = getAvatarTheme(user);
+  return `
+    <span class="avatar-shell avatar-shell--${theme}" data-avatar-theme="${theme}">
+      <span class="avatar-orbit" aria-hidden="true"></span>
+      <img class="avatar-badge" src="${getAvatarUrlForUser(user)}" alt="${label}" loading="lazy">
+      <span class="avatar-spark avatar-spark-a" aria-hidden="true"></span>
+      <span class="avatar-spark avatar-spark-b" aria-hidden="true"></span>
+    </span>
+  `;
 }
 
 function normalizeDateValue(dateValue) {
@@ -1310,7 +1334,7 @@ async function renderFriendsPanel() {
       card.className = "friend-chip";
       card.innerHTML = `
         <div class="friend-chip-main">
-          <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+          ${buildAvatarMarkup(friend, `${friend.name} avatar`)}
           <div>
             <strong>${friend.name}</strong>
             <span class="muted-text">${friend.email}</span>
@@ -1353,7 +1377,7 @@ async function renderFriendsPanel() {
         card.className = "friend-chip";
         card.innerHTML = `
           <div class="friend-chip-main">
-            <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+            ${buildAvatarMarkup(friend, `${friend.name} avatar`)}
             <div>
               <strong>${friend.name}</strong>
               <span class="muted-text">${friend.email}</span>
@@ -1386,7 +1410,7 @@ async function renderFriendsPanel() {
         card.className = "friend-chip";
         card.innerHTML = `
           <div class="friend-chip-main">
-            <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+            ${buildAvatarMarkup(friend, `${friend.name} avatar`)}
             <div>
               <strong>${friend.name}</strong>
               <span class="muted-text">${friend.email}</span>
@@ -1435,7 +1459,7 @@ async function renderFriendsPanel() {
 
         card.innerHTML = `
           <div class="friend-chip-main">
-            <img class="avatar-badge" src="${getAvatarUrlForUser(result)}" alt="${result.name} avatar" loading="lazy">
+            ${buildAvatarMarkup(result, `${result.name} avatar`)}
             <div>
               <strong>${result.name}</strong>
               <span class="muted-text">${result.email}</span>
@@ -1548,7 +1572,7 @@ async function renderLeaderboardPanel() {
         row.innerHTML = `
           <span class="leaderboard-rank">#${entry.rank}</span>
           <div class="leaderboard-user-shell">
-            <img class="avatar-badge" src="${getAvatarUrlForUser(entry)}" alt="${entry.name} avatar" loading="lazy">
+            ${buildAvatarMarkup(entry, `${entry.name} avatar`)}
             <div class="leaderboard-user">
               <strong>${entry.name}</strong>
               <span class="muted-text">${entry.completedLectures}/${entry.totalLectures} completed - ${entry.progressPercentage}% progress</span>
@@ -3762,7 +3786,7 @@ function renderWeeklyWinnerCard(friends) {
   container.innerHTML = `
     <article class="friend-chip spotlight">
       <div class="friend-chip-main">
-        <img class="avatar-badge" src="${getAvatarUrlForUser(winner)}" alt="${winner.name} avatar" loading="lazy">
+        ${buildAvatarMarkup(winner, `${winner.name} avatar`)}
         <div>
           <strong>${winner.name}</strong>
           <span class="muted-text">Most likely to set the pace this week</span>
