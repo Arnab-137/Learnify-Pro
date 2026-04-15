@@ -29,6 +29,7 @@ const DEFAULT_API_BASE_URL = (() => {
 const ESTIMATED_LECTURE_MINUTES = 45;
 const STUDY_DATA_CACHE_TTL = 5 * 60 * 1000;
 const ANALYTICS_CACHE_TTL = 10 * 60 * 1000;
+const ANALYTICS_CACHE_VERSION = 2;
 const DEFAULT_DAILY_GOAL = 2;
 const DEFAULT_WEEKLY_CHALLENGE = 5;
 const DEFAULT_BREAK_SECONDS = 10 * 60;
@@ -452,7 +453,8 @@ function clearStudyDataCache() {
 
 function getAnalyticsCache() {
   const cache = readStorage(STORAGE_KEYS.analyticsCache, null);
-  if (!cache?.savedAt || !cache?.data) {
+  if (!cache?.savedAt || !cache?.data || cache.version !== ANALYTICS_CACHE_VERSION) {
+    localStorage.removeItem(STORAGE_KEYS.analyticsCache);
     return null;
   }
   if (Date.now() - cache.savedAt > ANALYTICS_CACHE_TTL) {
@@ -464,6 +466,7 @@ function getAnalyticsCache() {
 
 function saveAnalyticsCache(data) {
   writeStorage(STORAGE_KEYS.analyticsCache, {
+    version: ANALYTICS_CACHE_VERSION,
     savedAt: Date.now(),
     data
   });
