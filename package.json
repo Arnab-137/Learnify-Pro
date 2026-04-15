@@ -1,0 +1,19 @@
+{
+  "name": "learnify-pro",
+  "version": "1.0.0",
+  "description": "Track every lecture, subject, and milestone in one focused workspace",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "learning",
+    "tracker",
+    "education"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  }
+}
