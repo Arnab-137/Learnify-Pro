@@ -26,7 +26,7 @@ function isLocalDevOrigin(origin = "") {
 }
 
 function isAllowedVercelOrigin(origin = "") {
-  return /^https:\/\/learnify-pro(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
 }
 
 function isAllowedOrigin(origin) {
