@@ -472,9 +472,13 @@ function wait(milliseconds) {
 
 function initializeSharedExperience() {
   ensureToastHost();
+  ensurePageTransitionVeil();
+  ensureSkipLink();
+  enhanceStatusAccessibility();
   bindInstallPromptUi();
   registerServiceWorker();
   showQueuedToasts();
+  decorateEmptyStates();
 }
 
 async function apiRequest(path, options = {}) {
@@ -901,17 +905,20 @@ async function initDashboardPage(force = false) {
   bindCalendarNavigation(initDashboardPage);
   loadReactInsightsWidget();
   void loadDashboardEnhancements(force);
+  finalizeVisualPass();
 }
 
 async function initInsightsPage(force = false) {
   const { lectures, subjects, userCompletions } = await loadStudyData(force);
   const enhancements = await getAnalyticsSnapshot(force);
   renderInsightsPage(lectures, subjects, userCompletions, enhancements);
+  finalizeVisualPass();
 }
 
 async function initPlannerPage(force = false) {
   const { lectures, subjects, userCompletions } = await loadStudyData(force);
   renderPlannerPage(lectures, subjects, userCompletions);
+  finalizeVisualPass();
 }
 
 async function initCalendarPage(force = false) {
@@ -928,21 +935,25 @@ async function initCalendarPage(force = false) {
   });
 
   bindCalendarNavigation(initCalendarPage);
+  finalizeVisualPass();
 }
 
 async function initSubjectsPage(force = false) {
   const { lectures, subjects, userCompletions } = await loadStudyData(force);
   renderSubjects(subjects, lectures, userCompletions, true);
   renderSubjectNotes(subjects);
+  finalizeVisualPass();
 }
 
 async function initFriendsPage() {
   await loadStudyData();
   await renderFriendsPanel();
+  finalizeVisualPass();
 }
 
 async function initLeaderboardPage() {
   await renderLeaderboardPanel();
+  finalizeVisualPass();
 }
 
 async function initLecturesPage(force = false) {
@@ -976,11 +987,13 @@ async function initLecturesPage(force = false) {
       openFocusMode(focusLecture, focusSubject);
     }
   }
+  finalizeVisualPass();
 }
 
 async function initAdminPage() {
   const { subjects } = await loadStudyData();
   renderAdminPage(subjects);
+  finalizeVisualPass();
 }
 
 function initSettingsPage() {
@@ -1825,6 +1838,9 @@ function createLectureCard(item, todayKey) {
   card.className = `lecture-card ${stateName} priority-${priority}${isTodayLecture ? " today-highlight" : ""}`;
   card.dataset.lectureId = lecture.id;
   card.dataset.state = stateName;
+  card.tabIndex = 0;
+  card.setAttribute("role", "article");
+  card.setAttribute("aria-label", `${subject?.name ?? "Subject"} ${lecture.title}, ${formatDate(lecture.date)}, ${stateName}`);
   card.innerHTML = `
     <div>
       <div class="lecture-title-row">
@@ -1893,6 +1909,12 @@ function createLectureCard(item, todayKey) {
       subjectId: lecture.subjectId,
       date: lecture.date
     });
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openFocusMode(lecture, subject);
+    }
   });
 
   return card;
@@ -2453,8 +2475,91 @@ function bindPageTransitions() {
   document.querySelectorAll("a[href$='.html'], a[href*='.html?']").forEach((link) => {
     link.addEventListener("click", () => {
       document.body.classList.add("is-transitioning");
+      const veil = document.getElementById("page-transition-veil");
+      veil?.classList.add("visible");
     });
   });
+}
+
+function ensurePageTransitionVeil() {
+  if (document.getElementById("page-transition-veil")) {
+    return;
+  }
+  const veil = document.createElement("div");
+  veil.id = "page-transition-veil";
+  veil.className = "page-transition-veil";
+  document.body.appendChild(veil);
+  window.addEventListener("pageshow", () => {
+    document.body.classList.remove("is-transitioning");
+    veil.classList.remove("visible");
+  });
+}
+
+function ensureSkipLink() {
+  if (document.querySelector(".skip-link")) {
+    return;
+  }
+  const target = document.querySelector(".page-view, .auth-view, main, section.view");
+  if (target && !target.id) {
+    target.id = "main-content";
+  }
+  const skipLink = document.createElement("a");
+  skipLink.className = "skip-link";
+  skipLink.href = "#main-content";
+  skipLink.textContent = "Skip to content";
+  document.body.insertAdjacentElement("afterbegin", skipLink);
+}
+
+function enhanceStatusAccessibility() {
+  [
+    "auth-message",
+    "friend-search-status",
+    "api-base-url-status",
+    "planner-status",
+    "admin-key-status",
+    "install-app-status"
+  ].forEach((id) => {
+    const node = document.getElementById(id);
+    if (!node) {
+      return;
+    }
+    node.setAttribute("role", "status");
+    node.setAttribute("aria-live", "polite");
+  });
+}
+
+function decorateEmptyStates() {
+  document.querySelectorAll(".empty-state").forEach((node) => {
+    if (node.querySelector(".empty-state-badge")) {
+      return;
+    }
+    const badge = document.createElement("span");
+    badge.className = "empty-state-badge";
+    badge.setAttribute("aria-hidden", "true");
+    badge.textContent = "○";
+    node.prepend(badge);
+  });
+}
+
+function applyStagger(containerSelector, itemSelector) {
+  document.querySelectorAll(containerSelector).forEach((container) => {
+    container.querySelectorAll(itemSelector).forEach((item, index) => {
+      item.classList.add("stagger-item");
+      item.style.setProperty("--stagger-delay", `${Math.min(index * 55, 360)}ms`);
+    });
+  });
+}
+
+function finalizeVisualPass() {
+  decorateEmptyStates();
+  applyStagger(".stats-grid", ".stat-card");
+  applyStagger(".subjects-grid", ".subject-card");
+  applyStagger(".lecture-list", ".lecture-group");
+  applyStagger(".friends-list", ".friend-chip");
+  applyStagger(".leaderboard-list", ".leaderboard-row");
+  applyStagger(".analysis-list", ".analysis-row");
+  applyStagger(".planner-schedule-list", ".planner-day-card");
+  applyStagger(".subject-notes-grid", ".subject-note-card");
 }
 
 function renderTodaysFocus(lectures, subjects, userCompletions) {
@@ -3440,6 +3545,8 @@ function ensureToastHost() {
   const host = document.createElement("div");
   host.id = "toast-host";
   host.className = "toast-host";
+  host.setAttribute("aria-live", "polite");
+  host.setAttribute("aria-atomic", "false");
   document.body.appendChild(host);
 }
 
