@@ -633,6 +633,48 @@ input:focus-visible,
   gap: 16px;
 }
 
+.api-insights-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.quote-card {
+  align-content: start;
+}
+
+.quote-text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.06rem;
+  line-height: 1.7;
+}
+
+.quote-author {
+  margin: 8px 0 0;
+}
+
+.analytics-image {
+  width: 100%;
+  display: block;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.insights-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+  color: var(--text);
+}
+
+.insights-list li {
+  line-height: 1.55;
+}
+
 .react-hero-card,
 .react-tabs-card,
 .react-insight-card {
@@ -1973,6 +2015,24 @@ body.focus-active .mobile-nav {
   margin-bottom: 4px;
 }
 
+.friend-chip-main,
+.leaderboard-user-shell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
 .friend-chip-meta {
   display: flex;
   gap: 8px;
@@ -1996,6 +2056,21 @@ body.focus-active .mobile-nav {
   gap: 14px;
   align-items: center;
   padding: 16px 18px;
+}
+
+.leaderboard-meta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.leaderboard-progress-pill {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .leaderboard-row.is-current-user {
@@ -2138,7 +2213,9 @@ body[data-theme="dark"] .react-hero-card,
 body[data-theme="dark"] .react-tabs-card,
 body[data-theme="dark"] .react-insight-card,
 body[data-theme="dark"] .react-mini-metric,
-body[data-theme="dark"] .react-tab-button {
+body[data-theme="dark"] .react-tab-button,
+body[data-theme="dark"] .avatar-badge,
+body[data-theme="dark"] .analytics-image {
   background: linear-gradient(180deg, rgba(21, 33, 49, 0.95), rgba(15, 24, 35, 0.9));
   border-color: rgba(180, 205, 236, 0.12);
   box-shadow:
@@ -2375,6 +2452,10 @@ body[data-theme="dark"]::after {
     justify-content: flex-start;
   }
 
+  .leaderboard-meta {
+    justify-items: flex-start;
+  }
+
   .lecture-panel-actions,
   .subject-playlists {
     width: 100%;
@@ -2464,6 +2545,7 @@ body[data-theme="dark"]::after {
   .single-panel-layout,
   .content-grid,
   .overview-detail-grid,
+  .api-insights-grid,
   .competition-grid,
   .focus-grid {
     grid-template-columns: 1fr;

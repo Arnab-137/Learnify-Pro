@@ -231,7 +231,8 @@ const state = {
   currentLectures: [],
   currentCompletions: [],
   hasStudyData: false,
-  reactInsightsRequested: false
+  reactInsightsRequested: false,
+  dashboardEnhancements: null
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -332,6 +333,7 @@ function saveSession(session) {
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.session);
   clearStudyDataCache();
+  state.dashboardEnhancements = null;
 }
 
 function getSessionUser() {
@@ -504,8 +506,18 @@ function normalizeUser(user) {
   return {
     id: user.id || user._id,
     name: user.name,
-    email: user.email
+    email: user.email,
+    avatarUrl: user.avatarUrl || null
   };
+}
+
+function getAvatarUrlForUser(user) {
+  if (user?.avatarUrl) {
+    return user.avatarUrl;
+  }
+
+  const seed = encodeURIComponent(user?.name || user?.email || "Learner");
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
 }
 
 function normalizeDateValue(dateValue) {
@@ -806,6 +818,7 @@ async function initDashboardPage(force = false) {
   });
   bindCalendarNavigation(initDashboardPage);
   loadReactInsightsWidget();
+  void loadDashboardEnhancements(force);
 }
 
 async function initCalendarPage(force = false) {
@@ -1127,9 +1140,12 @@ async function renderFriendsPanel() {
       const card = document.createElement("article");
       card.className = "friend-chip";
       card.innerHTML = `
-        <div>
-          <strong>${friend.name}</strong>
-          <span class="muted-text">${friend.email}</span>
+        <div class="friend-chip-main">
+          <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+          <div>
+            <strong>${friend.name}</strong>
+            <span class="muted-text">${friend.email}</span>
+          </div>
         </div>
       `;
       container.appendChild(card);
@@ -1163,9 +1179,12 @@ async function renderFriendsPanel() {
         const card = document.createElement("article");
         card.className = "friend-chip";
         card.innerHTML = `
-          <div>
-            <strong>${friend.name}</strong>
-            <span class="muted-text">${friend.email}</span>
+          <div class="friend-chip-main">
+            <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+            <div>
+              <strong>${friend.name}</strong>
+              <span class="muted-text">${friend.email}</span>
+            </div>
           </div>
           <div class="friend-chip-meta">
             <button class="ghost-button accept-request" type="button">Accept</button>
@@ -1192,9 +1211,12 @@ async function renderFriendsPanel() {
         const card = document.createElement("article");
         card.className = "friend-chip";
         card.innerHTML = `
-          <div>
-            <strong>${friend.name}</strong>
-            <span class="muted-text">${friend.email}</span>
+          <div class="friend-chip-main">
+            <img class="avatar-badge" src="${getAvatarUrlForUser(friend)}" alt="${friend.name} avatar" loading="lazy">
+            <div>
+              <strong>${friend.name}</strong>
+              <span class="muted-text">${friend.email}</span>
+            </div>
           </div>
           <div class="friend-chip-meta">
             <span>Pending</span>
@@ -1238,9 +1260,12 @@ async function renderFriendsPanel() {
               : "Add friend";
 
         card.innerHTML = `
-          <div>
-            <strong>${result.name}</strong>
-            <span class="muted-text">${result.email}</span>
+          <div class="friend-chip-main">
+            <img class="avatar-badge" src="${getAvatarUrlForUser(result)}" alt="${result.name} avatar" loading="lazy">
+            <div>
+              <strong>${result.name}</strong>
+              <span class="muted-text">${result.email}</span>
+            </div>
           </div>
           <div class="friend-chip-meta">
             <button class="ghost-button search-action" type="button" ${result.isFriend || result.requestSent ? "disabled" : ""}>${actionLabel}</button>
@@ -1346,11 +1371,17 @@ async function renderLeaderboardPanel() {
         row.className = `leaderboard-row${entry.userId === state.currentUser.id ? " is-current-user" : ""}`;
         row.innerHTML = `
           <span class="leaderboard-rank">#${entry.rank}</span>
-          <div class="leaderboard-user">
-            <strong>${entry.name}</strong>
-            <span class="muted-text">${entry.completedLectures}/${entry.totalLectures} completed - ${entry.progressPercentage}% progress</span>
+          <div class="leaderboard-user-shell">
+            <img class="avatar-badge" src="${getAvatarUrlForUser(entry)}" alt="${entry.name} avatar" loading="lazy">
+            <div class="leaderboard-user">
+              <strong>${entry.name}</strong>
+              <span class="muted-text">${entry.completedLectures}/${entry.totalLectures} completed - ${entry.progressPercentage}% progress</span>
+            </div>
           </div>
-          <span class="leaderboard-streak">${entry.streak} day streak</span>
+          <div class="leaderboard-meta">
+            <span class="leaderboard-progress-pill">${entry.progressPercentage}%</span>
+            <span class="leaderboard-streak">${entry.streak} day streak</span>
+          </div>
         `;
         leaderboard.appendChild(row);
       });
@@ -1400,6 +1431,93 @@ function getRivalryMessage(competitors) {
 
   const gap = leader.stats.completed - current.stats.completed;
   return `${getUserDisplayName(leader.user)} is ahead right now. Complete ${gap || 1} more lecture${gap === 1 ? "" : "s"} to catch up.`;
+}
+
+async function loadDashboardEnhancements(force = false) {
+  const quoteText = document.getElementById("dashboard-quote-text");
+  const quoteAuthor = document.getElementById("dashboard-quote-author");
+  const weeklyImage = document.getElementById("weekly-chart-image");
+  const weeklyFallback = document.getElementById("weekly-chart-fallback");
+  const subjectImage = document.getElementById("subject-chart-image");
+  const subjectFallback = document.getElementById("subject-chart-fallback");
+  const insightsList = document.getElementById("dashboard-insights-list");
+
+  if (!quoteText || !quoteAuthor || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
+    return;
+  }
+
+  if (!force && state.dashboardEnhancements) {
+    renderDashboardEnhancements(state.dashboardEnhancements);
+    return;
+  }
+
+  const requests = await Promise.allSettled([
+    apiRequest("/analytics/weekly"),
+    apiRequest("/analytics/subjects"),
+    apiRequest("/analytics/insights")
+  ]);
+
+  const enhancements = {
+    weekly: requests[0].status === "fulfilled" ? requests[0].value.data || null : null,
+    subjects: requests[1].status === "fulfilled" ? requests[1].value.data || null : null,
+    insights: requests[2].status === "fulfilled" ? requests[2].value.data || null : null
+  };
+
+  state.dashboardEnhancements = enhancements;
+  renderDashboardEnhancements(enhancements);
+}
+
+function renderDashboardEnhancements(enhancements) {
+  const quoteText = document.getElementById("dashboard-quote-text");
+  const quoteAuthor = document.getElementById("dashboard-quote-author");
+  const weeklyImage = document.getElementById("weekly-chart-image");
+  const weeklyFallback = document.getElementById("weekly-chart-fallback");
+  const subjectImage = document.getElementById("subject-chart-image");
+  const subjectFallback = document.getElementById("subject-chart-fallback");
+  const insightsList = document.getElementById("dashboard-insights-list");
+
+  if (!quoteText || !quoteAuthor || !weeklyImage || !weeklyFallback || !subjectImage || !subjectFallback || !insightsList) {
+    return;
+  }
+
+  const quote = enhancements.insights?.quote;
+  quoteText.textContent = quote?.content || "Stay consistent. Small wins compound into major syllabus progress.";
+  quoteAuthor.textContent = quote?.author ? `— ${quote.author}` : "— Learnify Pro";
+
+  applyAnalyticsImage(weeklyImage, weeklyFallback, enhancements.weekly?.chartUrl, "Weekly completion chart");
+  applyAnalyticsImage(subjectImage, subjectFallback, enhancements.subjects?.chartUrl, "Subject progress chart");
+
+  const suggestions = Array.isArray(enhancements.insights?.suggestions) ? enhancements.insights.suggestions : [];
+  insightsList.innerHTML = "";
+
+  if (!suggestions.length) {
+    insightsList.innerHTML = "<li>Finish one pending lecture to unlock smarter study coaching.</li>";
+    return;
+  }
+
+  suggestions.slice(0, 4).forEach((suggestion) => {
+    const item = document.createElement("li");
+    item.textContent = suggestion;
+    insightsList.appendChild(item);
+  });
+}
+
+function applyAnalyticsImage(imageNode, fallbackNode, url, alt) {
+  if (!imageNode || !fallbackNode) {
+    return;
+  }
+
+  if (!url) {
+    imageNode.classList.add("hidden");
+    fallbackNode.textContent = "Analytics image is unavailable right now.";
+    fallbackNode.classList.remove("hidden");
+    return;
+  }
+
+  imageNode.alt = alt;
+  imageNode.src = url;
+  imageNode.classList.remove("hidden");
+  fallbackNode.classList.add("hidden");
 }
 
 function renderStats(lectures, userCompletions) {

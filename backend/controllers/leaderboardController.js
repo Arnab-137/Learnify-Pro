@@ -4,6 +4,7 @@ const Lecture = require("../models/Lecture");
 const asyncHandler = require("../utils/asyncHandler");
 const { getCurrentStreak } = require("../utils/streak");
 const cacheService = require("../services/cacheService");
+const { getAvatarUrl } = require("../services/avatarService");
 
 async function buildLeaderboard(userIds) {
   const normalizedIds = [...new Set(userIds.map((id) => String(id)))].sort();
@@ -43,6 +44,7 @@ async function buildLeaderboard(userIds) {
     return {
       userId: user._id,
       name: user.name,
+      avatarUrl: getAvatarUrl(user.name || user.email),
       completedLectures,
       totalLectures,
       progressPercentage,
@@ -62,6 +64,7 @@ async function buildLeaderboard(userIds) {
     rank: index + 1,
     userId: entry.userId,
     name: entry.name,
+    avatarUrl: entry.avatarUrl,
     completedLectures: entry.completedLectures,
     totalLectures: entry.totalLectures,
     progressPercentage: entry.progressPercentage,
