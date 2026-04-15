@@ -230,7 +230,8 @@ const state = {
   currentSubjects: [],
   currentLectures: [],
   currentCompletions: [],
-  hasStudyData: false
+  hasStudyData: false,
+  reactInsightsRequested: false
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -241,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  state.currentUser = await hydrateCurrentUser();
+  state.currentUser = getSessionUser() || await hydrateCurrentUser();
 
   if (!state.currentUser) {
     window.location.href = "index.html";
@@ -257,6 +258,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderAppFrame();
+  void verifyCurrentUserSession();
 
   if (page === "dashboard") {
     await initDashboardPage();
@@ -330,6 +332,11 @@ function saveSession(session) {
 function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.session);
   clearStudyDataCache();
+}
+
+function getSessionUser() {
+  const session = getStoredSession();
+  return normalizeUser(session?.user);
 }
 
 function getStudyDataCache() {
@@ -455,6 +462,37 @@ async function hydrateCurrentUser() {
     }
 
     return normalizeUser(session.user);
+  }
+}
+
+async function verifyCurrentUserSession() {
+  const session = getStoredSession();
+  if (!session?.token) {
+    return;
+  }
+
+  try {
+    const response = await apiRequest("/auth/me");
+    const user = normalizeUser(response.data?.user);
+    if (!user) {
+      return;
+    }
+
+    state.currentUser = user;
+    saveSession({
+      token: session.token,
+      user
+    });
+    renderAppFrame();
+  } catch (error) {
+    if (error?.status !== 401) {
+      return;
+    }
+
+    clearSession();
+    if (document.body.dataset.page !== "auth") {
+      window.location.href = "index.html";
+    }
   }
 }
 
@@ -606,6 +644,31 @@ async function loadStudyData(force = false) {
   return data;
 }
 
+function loadReactInsightsWidget() {
+  if (state.reactInsightsRequested || document.body.dataset.page !== "dashboard") {
+    return;
+  }
+
+  const root = document.getElementById("react-productivity-root");
+  if (!root) {
+    return;
+  }
+
+  state.reactInsightsRequested = true;
+  const start = () => {
+    import("./react-insights.js").catch((error) => {
+      console.error("React insights failed to load:", error);
+    });
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(start, { timeout: 2000 });
+    return;
+  }
+
+  window.setTimeout(start, 900);
+}
+
 async function initAuthPage() {
   const form = document.getElementById("auth-form");
   const nameField = document.getElementById("auth-name-field");
@@ -670,6 +733,9 @@ async function initAuthPage() {
         token: response.data?.token,
         user
       });
+      state.currentUser = user;
+      messageNode.textContent = "Preparing your dashboard...";
+      await loadStudyData(true);
       window.location.href = "dashboard.html";
     } catch (error) {
       messageNode.textContent = error.message || "Authentication failed.";
@@ -739,6 +805,7 @@ async function initDashboardPage(force = false) {
     }
   });
   bindCalendarNavigation(initDashboardPage);
+  loadReactInsightsWidget();
 }
 
 async function initCalendarPage(force = false) {
