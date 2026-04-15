@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard.html
+Disallow: /subjects.html
+Disallow: /lectures.html
+Disallow: /friends.html
+Disallow: /leaderboard.html
+Disallow: /settings.html
+Disallow: /calendar.html
+Disallow: /insights.html
+Disallow: /planner.html
+Disallow: /admin.html
 
 Sitemap: https://learnify-elite.vercel.app/sitemap.xml

@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "description": "Learnify Elite is a study tracker for lectures, syllabus completion, focus sessions, and progress monitoring.",
+  "description": "Learnify Elite is a study tracker and lecture planner for syllabus completion, focus sessions, exam preparation, and progress monitoring.",
   "icons": [
     {
       "src": "/favicon.png",
