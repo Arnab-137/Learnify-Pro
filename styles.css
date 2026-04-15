@@ -24,6 +24,7 @@
   --duration-fast: 260ms;
   --duration-base: 420ms;
   --duration-slow: 720ms;
+  --duration-luxury: 980ms;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -119,6 +120,10 @@ select:focus-visible,
   display: none !important;
 }
 
+.is-gsap-hidden {
+  opacity: 0;
+}
+
 .app-shell {
   min-height: 100vh;
   padding: 24px;
@@ -187,6 +192,17 @@ body[data-theme="dark"] .page-transition-veil {
   filter: blur(7px);
 }
 
+.app-shell[data-barba="container"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.18), transparent 22%),
+    radial-gradient(circle at 84% 16%, rgba(255, 138, 82, 0.08), transparent 20%);
+  opacity: 0.7;
+}
+
 .view {
   max-width: 1240px;
   margin: 0 auto;
@@ -213,7 +229,12 @@ body[data-theme="dark"] .page-transition-veil {
   box-shadow: var(--shadow);
   backdrop-filter: saturate(180%) blur(26px);
   -webkit-backdrop-filter: saturate(180%) blur(26px);
-  transition: transform var(--duration-base) var(--ease-spring), box-shadow var(--duration-base) var(--ease-spring), background var(--duration-base) ease, border-color var(--duration-base) ease;
+  transition:
+    transform var(--duration-base) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-spring),
+    background var(--duration-base) ease,
+    border-color var(--duration-base) ease,
+    filter var(--duration-base) ease;
   position: relative;
   overflow: hidden;
 }
@@ -247,6 +268,52 @@ body[data-theme="dark"] .page-transition-veil {
   pointer-events: none;
   background: radial-gradient(circle, rgba(255, 138, 82, 0.12), transparent 68%);
   filter: blur(8px);
+}
+
+.hero-panel:hover,
+.auth-card:hover,
+.summary-panel:hover,
+.calendar-panel:hover,
+.page-panel:hover,
+.chart-card:hover,
+.action-card:hover,
+.subject-card:hover,
+.lecture-card:hover,
+.stat-card:hover,
+.leaderboard-row:hover,
+.friend-chip:hover,
+.today-focus-item:hover,
+.preview-card:hover,
+.testimonial-card:hover,
+.marketing-feature:hover {
+  box-shadow:
+    0 28px 64px rgba(84, 103, 128, 0.18),
+    0 8px 24px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 138, 82, 0.18);
+  filter: saturate(1.03);
+}
+
+body[data-theme="dark"] .hero-panel:hover,
+body[data-theme="dark"] .auth-card:hover,
+body[data-theme="dark"] .summary-panel:hover,
+body[data-theme="dark"] .calendar-panel:hover,
+body[data-theme="dark"] .page-panel:hover,
+body[data-theme="dark"] .chart-card:hover,
+body[data-theme="dark"] .action-card:hover,
+body[data-theme="dark"] .subject-card:hover,
+body[data-theme="dark"] .lecture-card:hover,
+body[data-theme="dark"] .stat-card:hover,
+body[data-theme="dark"] .leaderboard-row:hover,
+body[data-theme="dark"] .friend-chip:hover,
+body[data-theme="dark"] .today-focus-item:hover,
+body[data-theme="dark"] .preview-card:hover,
+body[data-theme="dark"] .testimonial-card:hover,
+body[data-theme="dark"] .marketing-feature:hover {
+  box-shadow:
+    0 28px 72px rgba(2, 10, 20, 0.46),
+    0 8px 24px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .hero-panel {
@@ -345,6 +412,7 @@ body[data-theme="dark"] .page-transition-veil {
   border-radius: 999px;
   cursor: pointer;
   transition: transform var(--duration-fast) var(--ease-spring), background var(--duration-base) ease, color var(--duration-base) ease, box-shadow var(--duration-base) ease, border-color var(--duration-base) ease;
+  transform-origin: center;
 }
 
 .tab-button,
@@ -353,6 +421,24 @@ body[data-theme="dark"] .page-transition-veil {
   background: transparent;
   color: var(--muted);
   text-decoration: none;
+}
+
+.primary-button:hover,
+.ghost-button:hover,
+.playlist-link:hover,
+.app-link:hover {
+  box-shadow:
+    0 16px 34px rgba(84, 103, 128, 0.14),
+    0 4px 18px rgba(255, 138, 82, 0.12);
+}
+
+body[data-theme="dark"] .primary-button:hover,
+body[data-theme="dark"] .ghost-button:hover,
+body[data-theme="dark"] .playlist-link:hover,
+body[data-theme="dark"] .app-link:hover {
+  box-shadow:
+    0 18px 38px rgba(2, 10, 20, 0.36),
+    0 4px 16px rgba(255, 159, 107, 0.12);
 }
 
 .tab-button.active,
@@ -1298,7 +1384,12 @@ body[data-theme="dark"] .overview-detail-card {
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
-  transition: transform 220ms var(--ease-spring), background 180ms ease, border-color 180ms ease, box-shadow 220ms ease;
+  transition:
+    transform 260ms var(--ease-spring),
+    background 220ms ease,
+    border-color 220ms ease,
+    box-shadow 280ms ease,
+    filter 260ms ease;
   position: relative;
   transform-origin: center;
   overflow: hidden;
@@ -1329,7 +1420,10 @@ body[data-theme="dark"] .overview-detail-card {
 
 .calendar-day:hover {
   transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 16px 26px rgba(59, 42, 18, 0.1);
+  box-shadow:
+    0 16px 26px rgba(59, 42, 18, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  filter: saturate(1.05);
 }
 
 .calendar-day::after {
@@ -3203,6 +3297,50 @@ body[data-theme="dark"]::after {
   transform: translateY(18px) scale(0.985);
   animation: stagger-rise 620ms var(--ease-smooth) forwards;
   animation-delay: var(--stagger-delay, 0ms);
+}
+
+.chart-card,
+.action-card,
+.stat-card,
+.subject-card,
+.lecture-card,
+.leaderboard-row,
+.friend-chip,
+.today-focus-item,
+.preview-card,
+.testimonial-card,
+.marketing-feature {
+  transform-origin: center;
+}
+
+.lecture-card::after,
+.subject-card::after,
+.chart-card::after,
+.action-card::after,
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 34%);
+  opacity: 0;
+  transition: opacity 360ms ease;
+}
+
+.lecture-card:hover::after,
+.subject-card:hover::after,
+.chart-card:hover::after,
+.action-card:hover::after,
+.stat-card:hover::after {
+  opacity: 1;
+}
+
+body[data-theme="dark"] .lecture-card::after,
+body[data-theme="dark"] .subject-card::after,
+body[data-theme="dark"] .chart-card::after,
+body[data-theme="dark"] .action-card::after,
+body[data-theme="dark"] .stat-card::after {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 34%);
 }
 
 @keyframes stagger-rise {

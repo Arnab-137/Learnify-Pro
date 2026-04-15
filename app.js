@@ -269,6 +269,11 @@ const state = {
   installPromptEvent: null
 };
 
+const motionState = {
+  cleanup: [],
+  scrollTriggersRegistered: false
+};
+
 let sharedExperienceInitialized = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -2668,6 +2673,187 @@ function finalizeVisualPass() {
   applyStagger(".analysis-list", ".analysis-row");
   applyStagger(".planner-schedule-list", ".planner-day-card");
   applyStagger(".subject-notes-grid", ".subject-note-card");
+  applyGsapEnhancements();
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function clearGsapEnhancements() {
+  motionState.cleanup.forEach((cleanup) => {
+    try {
+      cleanup();
+    } catch (error) {
+      console.warn("Animation cleanup failed", error);
+    }
+  });
+  motionState.cleanup = [];
+}
+
+function applyGsapEnhancements() {
+  clearGsapEnhancements();
+
+  if (prefersReducedMotion() || !window.gsap) {
+    document.querySelectorAll(".is-gsap-hidden").forEach((node) => {
+      node.classList.remove("is-gsap-hidden");
+    });
+    return;
+  }
+
+  const gsap = window.gsap;
+  const ScrollTrigger = window.ScrollTrigger;
+
+  if (ScrollTrigger && !motionState.scrollTriggersRegistered) {
+    gsap.registerPlugin(ScrollTrigger);
+    motionState.scrollTriggersRegistered = true;
+  }
+
+  const heroNodes = document.querySelectorAll(".app-header, .topbar, .auth-card, .hero-panel, .summary-header");
+  heroNodes.forEach((node) => node.classList.add("is-gsap-hidden"));
+  if (heroNodes.length) {
+    gsap.fromTo(
+      heroNodes,
+      { y: 16, opacity: 0, filter: "blur(10px)" },
+      {
+        y: 0,
+        opacity: 1,
+        filter: "blur(0px)",
+        duration: 0.7,
+        ease: "power3.out",
+        stagger: 0.05,
+        clearProps: "all"
+      }
+    );
+  }
+
+  const revealSelectors = [
+    ".stat-card",
+    ".chart-card",
+    ".action-card",
+    ".subject-card",
+    ".lecture-card",
+    ".today-focus-item",
+    ".leaderboard-row",
+    ".friend-chip",
+    ".analysis-row",
+    ".planner-day-card",
+    ".subject-note-card",
+    ".marketing-feature",
+    ".preview-card",
+    ".testimonial-card"
+  ];
+
+  revealSelectors.forEach((selector) => {
+    document.querySelectorAll(selector).forEach((node, index) => {
+      node.classList.add("is-gsap-hidden");
+      if (ScrollTrigger) {
+        const tween = gsap.fromTo(
+          node,
+          { y: 22, opacity: 0, filter: "blur(12px)", scale: 0.988 },
+          {
+            y: 0,
+            opacity: 1,
+            filter: "blur(0px)",
+            scale: 1,
+            duration: 0.72,
+            ease: "power3.out",
+            delay: Math.min(index * 0.018, 0.12),
+            clearProps: "all",
+            scrollTrigger: {
+              trigger: node,
+              start: "top 88%",
+              once: true
+            }
+          }
+        );
+        motionState.cleanup.push(() => tween.scrollTrigger?.kill());
+      } else {
+        gsap.fromTo(
+          node,
+          { y: 22, opacity: 0, filter: "blur(12px)", scale: 0.988 },
+          {
+            y: 0,
+            opacity: 1,
+            filter: "blur(0px)",
+            scale: 1,
+            duration: 0.72,
+            ease: "power3.out",
+            delay: Math.min(index * 0.018, 0.12),
+            clearProps: "all"
+          }
+        );
+      }
+    });
+  });
+
+  document.querySelectorAll(".calendar-panel, .summary-panel, .page-panel").forEach((panel) => {
+    if (!ScrollTrigger) {
+      return;
+    }
+    const tween = gsap.to(panel, {
+      yPercent: -1.25,
+      ease: "none",
+      scrollTrigger: {
+        trigger: panel,
+        start: "top bottom",
+        end: "bottom top",
+        scrub: 0.8
+      }
+    });
+    motionState.cleanup.push(() => tween.scrollTrigger?.kill());
+  });
+
+  const interactiveNodes = document.querySelectorAll(
+    ".primary-button, .ghost-button, .playlist-link, .app-link, .subject-card, .lecture-card, .stat-card, .chart-card, .action-card, .leaderboard-row, .friend-chip, .calendar-day"
+  );
+
+  interactiveNodes.forEach((node) => {
+    const isCard = node.matches(".subject-card, .lecture-card, .stat-card, .chart-card, .action-card, .leaderboard-row, .friend-chip, .calendar-day");
+    const handleEnter = () => {
+      gsap.to(node, {
+        y: isCard ? -4 : -1,
+        scale: node.matches(".primary-button, .ghost-button, .playlist-link, .app-link") ? 1.01 : 1.008,
+        duration: 0.34,
+        ease: "power2.out",
+        overwrite: "auto"
+      });
+    };
+    const handleLeave = () => {
+      gsap.to(node, {
+        y: 0,
+        scale: 1,
+        duration: 0.42,
+        ease: "power3.out",
+        overwrite: "auto"
+      });
+    };
+    const handleDown = () => {
+      gsap.to(node, {
+        scale: 0.988,
+        duration: 0.14,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1,
+        overwrite: "auto"
+      });
+    };
+
+    node.addEventListener("mouseenter", handleEnter);
+    node.addEventListener("mouseleave", handleLeave);
+    node.addEventListener("focus", handleEnter, true);
+    node.addEventListener("blur", handleLeave, true);
+    node.addEventListener("pointerdown", handleDown);
+
+    motionState.cleanup.push(() => {
+      node.removeEventListener("mouseenter", handleEnter);
+      node.removeEventListener("mouseleave", handleLeave);
+      node.removeEventListener("focus", handleEnter, true);
+      node.removeEventListener("blur", handleLeave, true);
+      node.removeEventListener("pointerdown", handleDown);
+      gsap.killTweensOf(node);
+    });
+  });
 }
 
 function renderTodaysFocus(lectures, subjects, userCompletions) {
