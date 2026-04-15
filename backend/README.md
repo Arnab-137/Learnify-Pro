@@ -57,6 +57,7 @@ backend/
    - `JWT_SECRET`
    - `FRONTEND_URLS`
    - `ADMIN_API_KEY`
+   - `AUTH_RATE_LIMIT_MAX`
    - optional API keys if you want external integrations:
      - `RESEND_API_KEY`
      - `EMAIL_FROM`
@@ -200,6 +201,9 @@ Bearer <token>
   - `success`
   - `message`
   - `data`
+
+- `AUTH_RATE_LIMIT_MAX=0` disables the auth limiter entirely
+- set `AUTH_RATE_LIMIT_MAX` to a positive number later if you want to re-enable throttling
 
 - Subject and lecture data are shared for all authenticated users
 - Completion, friends, and leaderboard personalization depend on the authenticated user

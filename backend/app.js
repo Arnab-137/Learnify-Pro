@@ -69,16 +69,19 @@ if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many authentication attempts. Please wait a few minutes and try again."
-  }
-});
+const authRateLimitMax = Number(process.env.AUTH_RATE_LIMIT_MAX || 0);
+const authLimiter = authRateLimitMax > 0
+  ? rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: authRateLimitMax,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        success: false,
+        message: "Too many authentication attempts. Please wait a few minutes and try again."
+      }
+    })
+  : null;
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -91,7 +94,11 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/api/auth", authLimiter, authRoutes);
+if (authLimiter) {
+  app.use("/api/auth", authLimiter, authRoutes);
+} else {
+  app.use("/api/auth", authRoutes);
+}
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/completions", completionRoutes);
 app.use("/api/friends", friendRoutes);
