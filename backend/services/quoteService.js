@@ -100,7 +100,7 @@ function getCurrentDateParts() {
 
 function getQuoteCacheKey() {
   const { year, month, day } = getCurrentDateParts();
-  return `daily-quote-${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return `daily-quote-curated-v2-${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function getQuoteIndex() {
