@@ -2523,6 +2523,9 @@ function initBarbaTransitions() {
         },
         async enter(data) {
           syncBarbaPageState(data.next);
+          if (data.current?.container?.isConnected) {
+            data.current.container.remove();
+          }
           data.next.container.classList.add("barba-enter-active");
           await bootstrapCurrentPage({ verifySession: false });
           requestAnimationFrame(() => {
