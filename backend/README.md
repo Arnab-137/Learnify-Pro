@@ -89,6 +89,22 @@ npm run dev
 npm start
 ```
 
+## Replace the study schedule from CSV
+
+To fully replace subjects, lectures, and all completion history while preserving user accounts and friendships, run:
+
+```bash
+npm run import-schedule -- "C:\\path\\to\\schedule.csv"
+```
+
+The CSV header must be:
+
+```text
+Subject,Lecture title,Lecture number,Date (YYYY-MM-DD),Video link (optional)
+```
+
+Rows without a lecture number are numbered sequentially within their subject. The importer validates the entire file before deleting any existing schedule data.
+
 ## API Base URL
 
 ```text
@@ -235,11 +251,9 @@ Bearer <token>
 
 ### Quotable
 
-- Daily motivational quote endpoint
-- Falls back to a local quote if the public API is unavailable
+- Daily motivational quote fallback support
 
 ### YouTube Data API
 
 - Optional lecture video metadata enrichment
 - Thumbnail fallback works even without an API key for standard YouTube links
-
