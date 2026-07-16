@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node seed/index.js"
+    "seed": "node seed/index.js",
+    "import-schedule": "node scripts/importSchedule.js"
   },
   "keywords": [
     "study-tracker",
@@ -38,4 +39,3 @@
     "node": ">=18.0.0"
   }
 }
-
