@@ -1,4 +1,4 @@
-const CACHE_NAME = "learnify-elite-v1";
+const CACHE_NAME = "learnify-elite-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "/subjects.html",
   "/lectures.html",
   "/friends.html",
+  "/chat.html",
   "/leaderboard.html",
   "/settings.html",
   "/insights.html",
@@ -15,6 +16,8 @@ const APP_SHELL = [
   "/app.js",
   "/analytics.js",
   "/react-insights.js",
+  "/chat.css",
+  "/chat.js",
   "/favicon.png",
   "/site.webmanifest"
 ];
@@ -37,6 +40,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
+    return;
+  }
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin || requestUrl.pathname.startsWith("/api/") || requestUrl.pathname.startsWith("/socket.io/")) {
     return;
   }
 
