@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
+const { isAllowedOrigin } = require("./config/cors");
 
 const authRoutes = require("./routes/authRoutes");
 const subjectRoutes = require("./routes/subjectRoutes");
@@ -11,51 +12,11 @@ const friendRoutes = require("./routes/friendRoutes");
 const leaderboardRoutes = require("./routes/leaderboardRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
-
-const allowedOrigins = (process.env.FRONTEND_URLS || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-function isLocalDevOrigin(origin = "") {
-  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
-}
-
-function isAllowedVercelOrigin(origin = "") {
-  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
-}
-
-function isAllowedRenderFrontendOrigin(origin = "") {
-  return origin === "https://learnify-pro-frontend.onrender.com";
-}
-
-function isAllowedOrigin(origin) {
-  if (!origin) {
-    return true;
-  }
-
-  if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-    return true;
-  }
-
-  if (isAllowedVercelOrigin(origin)) {
-    return true;
-  }
-
-  if (isAllowedRenderFrontendOrigin(origin)) {
-    return true;
-  }
-
-  if (process.env.NODE_ENV !== "production" && isLocalDevOrigin(origin)) {
-    return true;
-  }
-
-  return false;
-}
 
 app.use(
   cors({
@@ -112,10 +73,10 @@ app.use("/api/completions", completionRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
-
