@@ -36,7 +36,10 @@ async function fetchMessages(filter, limit) {
 }
 
 const getGlobalMessages = asyncHandler(async (req, res) => {
-  const filter = { channel: "global" };
+  const filter = {
+    channel: "global",
+    hiddenFor: { $ne: req.user._id }
+  };
   const before = getBeforeFilter(req.query.before);
   if (before) {
     filter.createdAt = before;
@@ -66,6 +69,7 @@ const getDirectMessages = asyncHandler(async (req, res) => {
 
   const filter = {
     channel: "direct",
+    hiddenFor: { $ne: req.user._id },
     $or: [
       { sender: req.user._id, recipient: userId },
       { sender: userId, recipient: req.user._id }
