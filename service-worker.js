@@ -1,4 +1,4 @@
-const CACHE_NAME = "learnify-elite-v2";
+const CACHE_NAME = "learnify-elite-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
