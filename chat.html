@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learnify Elite Chat</title>
+  <meta name="description" content="Chat with the Learnify community and your accepted study friends.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="chat.css">
+</head>
+<body data-page="chat">
+  <div data-barba="wrapper">
+    <div class="app-shell" data-barba="container" data-barba-namespace="chat" data-page="chat">
+      <header class="app-header view">
+        <div class="app-brand">
+          <span class="eyebrow">Learnify Elite</span>
+          <strong>Learnify Elite</strong>
+        </div>
+        <nav class="app-nav" aria-label="Primary"></nav>
+        <div class="app-user-bar">
+          <p id="welcome-text" class="muted-text"></p>
+          <button id="logout-button" class="ghost-button danger" type="button">Log Out</button>
+        </div>
+      </header>
+
+      <section class="view page-view chat-page-view">
+        <header class="topbar chat-topbar">
+          <div>
+            <span class="eyebrow">Live Chat</span>
+            <h2>Study together, in real time</h2>
+            <p class="muted-text">Join the global room or open a private conversation with an accepted friend.</p>
+          </div>
+          <a class="ghost-button" href="friends.html">Manage friends</a>
+        </header>
+
+        <section class="chat-workspace" aria-label="Chat workspace">
+          <aside class="chat-sidebar">
+            <div class="chat-tabs" role="tablist" aria-label="Chat modes">
+              <button id="chat-tab-global" class="chat-tab is-active" type="button" role="tab" aria-selected="true">Global</button>
+              <button id="chat-tab-friends" class="chat-tab" type="button" role="tab" aria-selected="false">Friends</button>
+            </div>
+
+            <div id="chat-global-summary" class="chat-global-summary">
+              <span class="chat-room-icon" aria-hidden="true">G</span>
+              <div>
+                <strong>Global room</strong>
+                <span id="chat-online-summary" class="muted-text">Connecting...</span>
+              </div>
+            </div>
+
+            <div id="chat-friends-panel" class="chat-friends-panel hidden">
+              <label class="chat-search-label" for="chat-friend-search">Find a friend</label>
+            <input id="chat-friend-search" class="search-input chat-friend-search" type="search" placeholder="Search your friends">
+              <div id="chat-friend-list" class="chat-friend-list"></div>
+            </div>
+          </aside>
+
+          <main class="chat-conversation">
+            <header class="chat-conversation-header">
+              <div>
+                <span id="chat-conversation-eyebrow" class="eyebrow">Community</span>
+                <h3 id="chat-conversation-title">Global chat</h3>
+              </div>
+              <span id="chat-connection-status" class="status-pill">Connecting</span>
+            </header>
+
+            <div id="chat-message-list" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <p id="chat-typing-status" class="chat-typing-status muted-text" aria-live="polite"></p>
+
+            <form id="chat-message-form" class="chat-composer">
+              <label class="sr-only" for="chat-message-input">Message</label>
+              <textarea id="chat-message-input" rows="1" maxlength="1000" placeholder="Write a message..." required></textarea>
+              <button id="chat-send-button" class="primary-button" type="submit">Send</button>
+            </form>
+            <p id="chat-error" class="chat-error" aria-live="assertive"></p>
+          </main>
+        </section>
+      </section>
+
+      <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
+    </div>
+  </div>
+  <script src="analytics.js"></script>
+  <script src="app.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>
