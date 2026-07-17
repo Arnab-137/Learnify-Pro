@@ -46,25 +46,19 @@
       scrollbar-width: thin;
     }
 
-    .dashboard-calendar-panel::-webkit-scrollbar,
-    .dashboard-calendar-panel .calendar-agenda::-webkit-scrollbar {
+    .dashboard-calendar-panel::-webkit-scrollbar {
       width: 10px;
     }
 
-    .dashboard-calendar-panel::-webkit-scrollbar-thumb,
-    .dashboard-calendar-panel .calendar-agenda::-webkit-scrollbar-thumb {
+    .dashboard-calendar-panel::-webkit-scrollbar-thumb {
       background: #ff7d47;
       border: 2px solid rgba(255, 255, 255, 0.72);
       border-radius: 999px;
     }
 
     .dashboard-calendar-panel .calendar-agenda {
-      max-height: 340px;
-      overflow-y: auto;
-      padding-right: 8px;
-      overscroll-behavior: contain;
-      scrollbar-color: #ff7d47 rgba(255, 138, 82, 0.12);
-      scrollbar-width: thin;
+      max-height: none;
+      overflow: visible;
     }
 
     @media (max-width: 640px) {
@@ -75,10 +69,6 @@
 
       .dashboard-calendar-panel {
         max-height: 72vh;
-      }
-
-      .dashboard-calendar-panel .calendar-agenda {
-        max-height: 280px;
       }
     }
   </style>
