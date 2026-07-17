@@ -122,19 +122,21 @@
   function updateScrollLatestButton({ hasNewMessage = false } = {}) {
     const ui = nodes();
     const canScroll = ui.messages.scrollHeight > ui.messages.clientHeight + 4;
-    const shouldShow = canScroll && !isNearMessageBottom(ui.messages);
-    ui.scrollLatest.classList.toggle("hidden", !shouldShow);
-    ui.scrollLatest.classList.toggle("has-new", shouldShow && hasNewMessage);
+    const atBottom = isNearMessageBottom(ui.messages);
+    ui.scrollLatest.classList.toggle("hidden", !canScroll);
+    ui.scrollLatest.classList.toggle("is-at-bottom", canScroll && atBottom);
+    ui.scrollLatest.classList.toggle("has-new", canScroll && !atBottom && hasNewMessage);
   }
 
   function scrollToLatest({ smooth = true } = {}) {
     const ui = nodes();
-    ui.messages.scrollTo({
-      top: ui.messages.scrollHeight,
-      behavior: smooth ? "smooth" : "auto"
-    });
-    ui.scrollLatest.classList.add("hidden");
+    if (smooth) {
+      ui.messages.scrollTo({ top: ui.messages.scrollHeight, behavior: "smooth" });
+    } else {
+      ui.messages.scrollTop = ui.messages.scrollHeight;
+    }
     ui.scrollLatest.classList.remove("has-new");
+    window.requestAnimationFrame(() => updateScrollLatestButton());
   }
 
   function messageMatchesView(message) {
@@ -260,7 +262,7 @@
     list.appendChild(row);
 
     if (scroll && !preserveScrollPosition) {
-      scrollToLatest();
+      scrollToLatest({ smooth: false });
     } else if (scroll) {
       updateScrollLatestButton({ hasNewMessage: true });
     }
