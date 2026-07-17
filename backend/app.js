@@ -29,6 +29,10 @@ function isAllowedVercelOrigin(origin = "") {
   return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
 }
 
+function isAllowedRenderFrontendOrigin(origin = "") {
+  return origin === "https://learnify-pro-frontend.onrender.com";
+}
+
 function isAllowedOrigin(origin) {
   if (!origin) {
     return true;
@@ -39,6 +43,10 @@ function isAllowedOrigin(origin) {
   }
 
   if (isAllowedVercelOrigin(origin)) {
+    return true;
+  }
+
+  if (isAllowedRenderFrontendOrigin(origin)) {
     return true;
   }
 
@@ -110,3 +118,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+
