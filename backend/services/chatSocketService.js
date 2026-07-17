@@ -119,6 +119,39 @@ function initializeChatSocket(server) {
       }
     });
 
+    socket.on("chat:delete", async (payload = {}, callback) => {
+      const messageId = payload.messageId;
+      if (!mongoose.Types.ObjectId.isValid(messageId)) {
+        return acknowledge(callback, { success: false, message: "This message could not be found." });
+      }
+
+      try {
+        const message = await Message.findOneAndDelete({
+          _id: messageId,
+          sender: user._id
+        });
+        if (!message) {
+          return acknowledge(callback, { success: false, message: "You can delete only your own messages." });
+        }
+
+        const data = {
+          messageId: String(message._id),
+          channel: message.channel,
+          senderId: userId,
+          recipientId: message.recipient ? String(message.recipient) : null
+        };
+
+        if (message.channel === "global") {
+          io.to(GLOBAL_ROOM).emit("chat:deleted", data);
+        } else {
+          io.to(userRoom(userId)).to(userRoom(data.recipientId)).emit("chat:deleted", data);
+        }
+        return acknowledge(callback, { success: true, data });
+      } catch (error) {
+        return acknowledge(callback, { success: false, message: "Unable to delete this message." });
+      }
+    });
+
     socket.on("chat:typing", (payload = {}) => {
       const recipientId = payload.recipientId;
       if (!mongoose.Types.ObjectId.isValid(recipientId) || !isFriend(user, recipientId)) {
