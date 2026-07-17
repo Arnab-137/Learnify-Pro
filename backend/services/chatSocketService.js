@@ -121,26 +121,45 @@ function initializeChatSocket(server) {
 
     socket.on("chat:delete", async (payload = {}, callback) => {
       const messageId = payload.messageId;
+      const scope = payload.scope === "me" ? "me" : "everyone";
       if (!mongoose.Types.ObjectId.isValid(messageId)) {
         return acknowledge(callback, { success: false, message: "This message could not be found." });
       }
 
       try {
-        const message = await Message.findOneAndDelete({
-          _id: messageId,
-          sender: user._id
-        });
+        const message = await Message.findById(messageId);
         if (!message) {
-          return acknowledge(callback, { success: false, message: "You can delete only your own messages." });
+          return acknowledge(callback, { success: false, message: "This message no longer exists." });
+        }
+
+        const isSender = String(message.sender) === userId;
+        const isRecipient = message.recipient && String(message.recipient) === userId;
+        if (message.channel === "direct" && !isSender && !isRecipient) {
+          return acknowledge(callback, { success: false, message: "You cannot change this message." });
         }
 
         const data = {
           messageId: String(message._id),
           channel: message.channel,
           senderId: userId,
-          recipientId: message.recipient ? String(message.recipient) : null
+          recipientId: message.recipient ? String(message.recipient) : null,
+          scope
         };
 
+        if (scope === "me") {
+          await Message.updateOne(
+            { _id: message._id },
+            { $addToSet: { hiddenFor: user._id } }
+          );
+          io.to(userRoom(userId)).emit("chat:deleted", data);
+          return acknowledge(callback, { success: true, data });
+        }
+
+        if (!isSender) {
+          return acknowledge(callback, { success: false, message: "You can delete for everyone only messages you sent." });
+        }
+
+        await Message.deleteOne({ _id: message._id });
         if (message.channel === "global") {
           io.to(GLOBAL_ROOM).emit("chat:deleted", data);
         } else {
