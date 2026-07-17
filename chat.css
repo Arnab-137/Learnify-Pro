@@ -550,6 +550,71 @@ body[data-page="chat"] textarea {
   box-shadow: 0 5px 15px rgba(57, 72, 93, 0.1);
 }
 
+.chat-selection-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  padding: 6px 7px 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 16px;
+  background: var(--chat-material-strong);
+  box-shadow: 0 12px 30px rgba(57, 72, 93, 0.18);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  transform: translateX(-50%);
+  animation: chat-selection-enter 220ms var(--chat-spring) both;
+}
+
+.chat-selection-bar strong {
+  margin-right: 3px;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 640;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-selection-action,
+.chat-selection-cancel {
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(133, 153, 178, 0.1);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chat-selection-action.danger {
+  color: var(--danger);
+  background: rgba(211, 93, 79, 0.1);
+}
+
+.chat-selection-cancel {
+  color: var(--muted);
+  background: transparent;
+}
+
+.chat-selection-action:hover,
+.chat-selection-cancel:hover {
+  transform: translateY(-1px);
+}
+
+.chat-selection-action:disabled,
+.chat-selection-cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
 .chat-message-list::-webkit-scrollbar {
   width: 7px;
 }
@@ -571,6 +636,10 @@ body[data-page="chat"] textarea {
 
 .chat-message-row.is-own {
   flex-direction: row-reverse;
+}
+
+.chat-message-row.is-selected .chat-message-bubble {
+  box-shadow: 0 0 0 2px var(--primary), 0 8px 20px rgba(57, 72, 93, 0.09);
 }
 
 .chat-message-row.is-removing {
@@ -647,22 +716,23 @@ body[data-page="chat"] textarea {
   transform: translateY(0);
 }
 
-.chat-message-delete {
+.chat-message-select {
   padding: 3px 0;
   border: 0;
-  color: var(--danger);
+  color: var(--muted);
   background: transparent;
   font-size: 0.66rem;
   font-weight: 580;
   cursor: pointer;
 }
 
-.chat-message-delete:hover {
+.chat-message-select:hover {
+  color: var(--text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.chat-message-delete:disabled {
+.chat-message-select:disabled {
   opacity: 0.56;
   cursor: default;
   text-decoration: none;
@@ -856,6 +926,17 @@ body[data-theme="dark"] .chat-presence-dot {
   }
 }
 
+@keyframes chat-selection-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -7px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chat-message-row {
     animation: none;
@@ -1042,6 +1123,22 @@ body[data-theme="dark"] .chat-presence-dot {
     padding: 16px 11px 12px;
   }
 
+  .chat-selection-bar {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    justify-content: center;
+    flex-wrap: wrap;
+    transform: none;
+    animation-name: chat-selection-enter-mobile;
+  }
+
+  .chat-selection-bar strong {
+    width: 100%;
+    margin: 0;
+    text-align: center;
+  }
+
   .chat-message-content {
     max-width: 82%;
   }
@@ -1071,6 +1168,17 @@ body[data-theme="dark"] .chat-presence-dot {
   .chat-error {
     margin-right: 14px;
     margin-left: 14px;
+  }
+}
+
+@keyframes chat-selection-enter-mobile {
+  from {
+    opacity: 0;
+    transform: translateY(-7px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
