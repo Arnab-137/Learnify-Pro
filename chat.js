@@ -88,6 +88,7 @@
       title: document.getElementById("chat-conversation-title"),
       status: document.getElementById("chat-connection-status"),
       messages: document.getElementById("chat-message-list"),
+      scrollLatest: document.getElementById("chat-scroll-latest"),
       typing: document.getElementById("chat-typing-status"),
       form: document.getElementById("chat-message-form"),
       input: document.getElementById("chat-message-input"),
@@ -114,6 +115,28 @@
     return String(state.user.id || state.user._id);
   }
 
+  function isNearMessageBottom(list = nodes().messages) {
+    return list.scrollHeight - list.scrollTop - list.clientHeight < 90;
+  }
+
+  function updateScrollLatestButton({ hasNewMessage = false } = {}) {
+    const ui = nodes();
+    const canScroll = ui.messages.scrollHeight > ui.messages.clientHeight + 4;
+    const shouldShow = canScroll && !isNearMessageBottom(ui.messages);
+    ui.scrollLatest.classList.toggle("hidden", !shouldShow);
+    ui.scrollLatest.classList.toggle("has-new", shouldShow && hasNewMessage);
+  }
+
+  function scrollToLatest({ smooth = true } = {}) {
+    const ui = nodes();
+    ui.messages.scrollTo({
+      top: ui.messages.scrollHeight,
+      behavior: smooth ? "smooth" : "auto"
+    });
+    ui.scrollLatest.classList.add("hidden");
+    ui.scrollLatest.classList.remove("has-new");
+  }
+
   function messageMatchesView(message) {
     if (state.mode === "global") {
       return message.channel === "global";
@@ -136,6 +159,54 @@
     copy.textContent = message;
     empty.append(title, copy);
     list.appendChild(empty);
+    nodes().scrollLatest.classList.add("hidden");
+  }
+
+  function handleDeletedMessage({ messageId } = {}) {
+    if (!messageId) {
+      return;
+    }
+    const list = nodes().messages;
+    const row = [...list.querySelectorAll(".chat-message-row")]
+      .find((item) => item.dataset.messageId === String(messageId));
+    state.renderedMessageIds.delete(String(messageId));
+    if (!row) {
+      return;
+    }
+    if (row.classList.contains("is-removing")) {
+      return;
+    }
+    row.classList.add("is-removing");
+    window.setTimeout(() => {
+      row.remove();
+      if (!list.querySelector(".chat-message-row")) {
+        renderEmpty(state.mode === "global" ? "Start the first community conversation." : "Say hello to your friend.");
+      }
+      updateScrollLatestButton();
+    }, 180);
+  }
+
+  function deleteMessageForEveryone(message, button) {
+    if (!state.socket?.connected) {
+      setError("Reconnect before deleting this message.");
+      return;
+    }
+    if (!window.confirm("Delete this message for everyone? This cannot be undone.")) {
+      return;
+    }
+
+    setError("");
+    button.disabled = true;
+    button.textContent = "Deleting...";
+    state.socket.emit("chat:delete", { messageId: message.id }, (result) => {
+      if (!result?.success) {
+        button.disabled = false;
+        button.textContent = "Delete for everyone";
+        setError(result?.message || "Message could not be deleted.");
+        return;
+      }
+      handleDeletedMessage(result.data);
+    });
   }
 
   function renderMessage(message, { scroll = true } = {}) {
@@ -145,10 +216,12 @@
     state.renderedMessageIds.add(String(message.id));
 
     const list = nodes().messages;
-    list.querySelector(".chat-empty-state")?.remove();
     const own = String(message.sender.id) === currentUserId();
+    const preserveScrollPosition = scroll && !own && !isNearMessageBottom(list);
+    list.querySelector(".chat-empty-state")?.remove();
     const row = document.createElement("article");
     row.className = `chat-message-row${own ? " is-own" : ""}`;
+    row.dataset.messageId = String(message.id);
 
     const avatar = document.createElement("span");
     avatar.className = "chat-message-avatar";
@@ -171,11 +244,25 @@
     bubble.className = "chat-message-bubble";
     bubble.textContent = message.body;
     content.append(meta, bubble);
+
+    if (own) {
+      const actions = document.createElement("div");
+      actions.className = "chat-message-actions";
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "chat-message-delete";
+      deleteButton.textContent = "Delete for everyone";
+      deleteButton.addEventListener("click", () => deleteMessageForEveryone(message, deleteButton));
+      actions.appendChild(deleteButton);
+      content.appendChild(actions);
+    }
     row.append(avatar, content);
     list.appendChild(row);
 
-    if (scroll) {
-      list.scrollTop = list.scrollHeight;
+    if (scroll && !preserveScrollPosition) {
+      scrollToLatest();
+    } else if (scroll) {
+      updateScrollLatestButton({ hasNewMessage: true });
     }
   }
 
@@ -187,7 +274,7 @@
       return;
     }
     messages.forEach((message) => renderMessage(message, { scroll: false }));
-    nodes().messages.scrollTop = nodes().messages.scrollHeight;
+    scrollToLatest({ smooth: false });
   }
 
   function renderFriendList(filter = "") {
@@ -284,6 +371,7 @@
     ui.send.disabled = ui.input.disabled || !state.socket?.connected;
     ui.input.placeholder = globalMode ? "Message everyone..." : state.activeFriend ? `Message ${state.activeFriend.name}...` : "Choose a friend first";
     ui.typing.textContent = "";
+    ui.scrollLatest.classList.add("hidden");
   }
 
   function updateConversationIdentity() {
@@ -385,6 +473,7 @@
       renderFriendList(nodes().friendSearch.value);
     });
     state.socket.on("chat:message", handleIncomingMessage);
+    state.socket.on("chat:deleted", handleDeletedMessage);
     state.socket.on("chat:typing", ({ userId, typing }) => {
       if (state.mode === "friends" && String(state.activeFriend?.id) === String(userId)) {
         nodes().typing.textContent = typing ? `${state.activeFriend.name} is typing...` : "";
@@ -397,6 +486,8 @@
     ui.globalTab.addEventListener("click", switchToGlobal);
     ui.friendsTab.addEventListener("click", switchToFriends);
     ui.friendSearch.addEventListener("input", () => renderFriendList(ui.friendSearch.value));
+    ui.messages.addEventListener("scroll", () => updateScrollLatestButton(), { passive: true });
+    ui.scrollLatest.addEventListener("click", () => scrollToLatest());
 
     ui.form.addEventListener("submit", (event) => {
       event.preventDefault();
