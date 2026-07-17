@@ -67,8 +67,13 @@ function parseCsv(text) {
 function parseSchedule(filePath) {
   const rows = parseCsv(fs.readFileSync(filePath, "utf8"));
   const [header, ...dataRows] = rows;
+  const hasDuplicateDateColumn = header?.length === REQUIRED_COLUMNS.length + 1 && header.at(-1) === "Date";
 
-  if (!header || REQUIRED_COLUMNS.some((column, index) => header[index] !== column)) {
+  if (
+    !header ||
+    REQUIRED_COLUMNS.some((column, index) => header[index] !== column) ||
+    header.length !== REQUIRED_COLUMNS.length && !hasDuplicateDateColumn
+  ) {
     throw new Error(`CSV header must be: ${REQUIRED_COLUMNS.join(", ")}`);
   }
 
@@ -81,12 +86,16 @@ function parseSchedule(filePath) {
   const subjectsByName = new Map();
   const lectures = [];
 
-  dataRows.forEach((row, index) => {
+  dataRows.forEach((sourceRow, index) => {
     const rowNumber = index + 2;
-    if (row.length !== REQUIRED_COLUMNS.length) {
-      throw new Error(`Row ${rowNumber} has ${row.length} columns; expected ${REQUIRED_COLUMNS.length}.`);
+    if (sourceRow.length !== header.length) {
+      throw new Error(`Row ${rowNumber} has ${sourceRow.length} columns; expected ${header.length}.`);
+    }
+    if (hasDuplicateDateColumn && sourceRow.at(-1) && sourceRow.at(-1) !== sourceRow[3]) {
+      throw new Error(`Row ${rowNumber} has conflicting date columns.`);
     }
 
+    const row = sourceRow.slice(0, REQUIRED_COLUMNS.length);
     const [subjectName, title, rawLectureNumber, date, youtubeLink] = row;
     if (!subjectName || !title || !date) {
       throw new Error(`Row ${rowNumber} must include a subject, lecture title, and date.`);
@@ -98,13 +107,13 @@ function parseSchedule(filePath) {
       throw new Error(`Row ${rowNumber} has an invalid video link.`);
     }
 
-    let lectureNumber = Number.parseInt(rawLectureNumber, 10);
+    let lectureNumber = Number(rawLectureNumber);
     const subjectKey = subjectName.toLocaleLowerCase();
     if (!rawLectureNumber) {
       lectureNumber = (assignedNumbers.get(subjectKey) || 0) + 1;
       assignedNumbers.set(subjectKey, lectureNumber);
     }
-    if (!Number.isInteger(lectureNumber) || lectureNumber < 1 || String(lectureNumber) !== rawLectureNumber && rawLectureNumber) {
+    if (!Number.isInteger(lectureNumber) || lectureNumber < 1) {
       throw new Error(`Row ${rowNumber} has an invalid lecture number.`);
     }
 
@@ -143,8 +152,22 @@ async function importSchedule() {
   const schedule = parseSchedule(filePath);
   console.log(`Validated ${schedule.lectures.length} schedule rows across ${schedule.subjects.length} subjects.`);
 
+  if (process.argv.includes("--validate-only")) {
+    console.log("Validation-only mode: database was not changed.");
+    return;
+  }
+
   await connectDB();
 
+  const [existingSubjects, existingLectures, existingCompletions] = await Promise.all([
+    Subject.countDocuments(),
+    Lecture.countDocuments(),
+    Completion.countDocuments()
+  ]);
+  console.log(
+    `Current database: ${existingSubjects} subjects, ${existingLectures} lectures, ` +
+    `${existingCompletions} completion records.`
+  );
   console.log("Replacing completions, lectures, and subjects. User accounts and friendships are unchanged.");
   await Completion.deleteMany({});
   await Lecture.deleteMany({});
