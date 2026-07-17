@@ -20,6 +20,7 @@
     onlineUsers: new Set(),
     unread: new Map(),
     renderedMessageIds: new Set(),
+    selectedMessage: null,
     socket: null,
     typingTimer: null
   };
@@ -89,6 +90,10 @@
       status: document.getElementById("chat-connection-status"),
       messages: document.getElementById("chat-message-list"),
       scrollLatest: document.getElementById("chat-scroll-latest"),
+      selectionBar: document.getElementById("chat-selection-bar"),
+      deleteMe: document.getElementById("chat-delete-me"),
+      deleteEveryone: document.getElementById("chat-delete-everyone"),
+      selectionCancel: document.getElementById("chat-selection-cancel"),
       typing: document.getElementById("chat-typing-status"),
       form: document.getElementById("chat-message-form"),
       input: document.getElementById("chat-message-input"),
@@ -164,6 +169,33 @@
     nodes().scrollLatest.classList.add("hidden");
   }
 
+  function clearMessageSelection() {
+    const ui = nodes();
+    state.selectedMessage = null;
+    ui.selectionBar.classList.add("hidden");
+    ui.deleteEveryone.classList.add("hidden");
+    ui.deleteMe.disabled = false;
+    ui.deleteEveryone.disabled = false;
+    ui.selectionCancel.disabled = false;
+    ui.messages.querySelectorAll(".chat-message-row.is-selected")
+      .forEach((row) => row.classList.remove("is-selected"));
+  }
+
+  function selectMessage(message, row) {
+    if (String(state.selectedMessage?.id) === String(message.id)) {
+      clearMessageSelection();
+      return;
+    }
+
+    clearMessageSelection();
+    const own = String(message.sender.id) === currentUserId();
+    state.selectedMessage = { ...message, own };
+    row.classList.add("is-selected");
+    const ui = nodes();
+    ui.selectionBar.classList.remove("hidden");
+    ui.deleteEveryone.classList.toggle("hidden", !own);
+  }
+
   function handleDeletedMessage({ messageId } = {}) {
     if (!messageId) {
       return;
@@ -172,6 +204,9 @@
     const row = [...list.querySelectorAll(".chat-message-row")]
       .find((item) => item.dataset.messageId === String(messageId));
     state.renderedMessageIds.delete(String(messageId));
+    if (String(state.selectedMessage?.id) === String(messageId)) {
+      clearMessageSelection();
+    }
     if (!row) {
       return;
     }
@@ -188,22 +223,37 @@
     }, 180);
   }
 
-  function deleteMessageForEveryone(message, button) {
+  function deleteSelectedMessage(scope) {
+    const message = state.selectedMessage;
+    if (!message) {
+      return;
+    }
     if (!state.socket?.connected) {
       setError("Reconnect before deleting this message.");
       return;
     }
-    if (!window.confirm("Delete this message for everyone? This cannot be undone.")) {
+    if (scope === "everyone" && !message.own) {
+      setError("You can delete for everyone only messages you sent.");
+      return;
+    }
+
+    const prompt = scope === "everyone"
+      ? "Delete this message for everyone? This cannot be undone."
+      : "Delete this message for you? Other people will still see it.";
+    if (!window.confirm(prompt)) {
       return;
     }
 
     setError("");
-    button.disabled = true;
-    button.textContent = "Deleting...";
-    state.socket.emit("chat:delete", { messageId: message.id }, (result) => {
+    const ui = nodes();
+    ui.deleteMe.disabled = true;
+    ui.deleteEveryone.disabled = true;
+    ui.selectionCancel.disabled = true;
+    state.socket.emit("chat:delete", { messageId: message.id, scope }, (result) => {
       if (!result?.success) {
-        button.disabled = false;
-        button.textContent = "Delete for everyone";
+        ui.deleteMe.disabled = false;
+        ui.deleteEveryone.disabled = false;
+        ui.selectionCancel.disabled = false;
         setError(result?.message || "Message could not be deleted.");
         return;
       }
@@ -247,17 +297,16 @@
     bubble.textContent = message.body;
     content.append(meta, bubble);
 
-    if (own) {
-      const actions = document.createElement("div");
-      actions.className = "chat-message-actions";
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "chat-message-delete";
-      deleteButton.textContent = "Delete for everyone";
-      deleteButton.addEventListener("click", () => deleteMessageForEveryone(message, deleteButton));
-      actions.appendChild(deleteButton);
-      content.appendChild(actions);
-    }
+    const actions = document.createElement("div");
+    actions.className = "chat-message-actions";
+    const selectButton = document.createElement("button");
+    selectButton.type = "button";
+    selectButton.className = "chat-message-select";
+    selectButton.textContent = "Select";
+    selectButton.setAttribute("aria-label", `Select message from ${own ? "you" : message.sender.name}`);
+    selectButton.addEventListener("click", () => selectMessage(message, row));
+    actions.appendChild(selectButton);
+    content.appendChild(actions);
     row.append(avatar, content);
     list.appendChild(row);
 
@@ -269,6 +318,7 @@
   }
 
   function renderMessages(messages) {
+    clearMessageSelection();
     state.renderedMessageIds.clear();
     nodes().messages.innerHTML = "";
     if (!messages.length) {
@@ -374,6 +424,7 @@
     ui.input.placeholder = globalMode ? "Message everyone..." : state.activeFriend ? `Message ${state.activeFriend.name}...` : "Choose a friend first";
     ui.typing.textContent = "";
     ui.scrollLatest.classList.add("hidden");
+    clearMessageSelection();
   }
 
   function updateConversationIdentity() {
@@ -490,6 +541,9 @@
     ui.friendSearch.addEventListener("input", () => renderFriendList(ui.friendSearch.value));
     ui.messages.addEventListener("scroll", () => updateScrollLatestButton(), { passive: true });
     ui.scrollLatest.addEventListener("click", () => scrollToLatest());
+    ui.deleteMe.addEventListener("click", () => deleteSelectedMessage("me"));
+    ui.deleteEveryone.addEventListener("click", () => deleteSelectedMessage("everyone"));
+    ui.selectionCancel.addEventListener("click", clearMessageSelection);
 
     ui.form.addEventListener("submit", (event) => {
       event.preventDefault();
