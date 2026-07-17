@@ -83,6 +83,7 @@
       friendSearch: document.getElementById("chat-friend-search"),
       friendList: document.getElementById("chat-friend-list"),
       onlineSummary: document.getElementById("chat-online-summary"),
+      conversationAvatar: document.getElementById("chat-conversation-avatar"),
       eyebrow: document.getElementById("chat-conversation-eyebrow"),
       title: document.getElementById("chat-conversation-title"),
       status: document.getElementById("chat-connection-status"),
@@ -278,12 +279,34 @@
     ui.friendsTab.setAttribute("aria-selected", String(!globalMode));
     ui.globalSummary.classList.toggle("hidden", !globalMode);
     ui.friendsPanel.classList.toggle("hidden", globalMode);
-    ui.eyebrow.textContent = globalMode ? "Community" : "Direct message";
-    ui.title.textContent = globalMode ? "Global chat" : state.activeFriend?.name || "Choose a friend";
+    updateConversationIdentity();
     ui.input.disabled = !globalMode && !state.activeFriend;
     ui.send.disabled = ui.input.disabled || !state.socket?.connected;
     ui.input.placeholder = globalMode ? "Message everyone..." : state.activeFriend ? `Message ${state.activeFriend.name}...` : "Choose a friend first";
     ui.typing.textContent = "";
+  }
+
+  function updateConversationIdentity() {
+    const ui = nodes();
+    const globalMode = state.mode === "global";
+    const activeFriend = state.activeFriend;
+    const online = activeFriend && state.onlineUsers.has(String(activeFriend.id));
+
+    ui.title.textContent = globalMode ? "Global chat" : activeFriend?.name || "Choose a friend";
+    ui.eyebrow.textContent = globalMode
+      ? `${state.onlineUsers.size} learner${state.onlineUsers.size === 1 ? "" : "s"} online`
+      : activeFriend
+        ? online ? "Online now" : "Direct message"
+        : "Select a conversation";
+
+    ui.conversationAvatar.replaceChildren();
+    ui.conversationAvatar.classList.toggle("is-global", globalMode);
+    if (!globalMode && activeFriend?.avatarUrl) {
+      const image = document.createElement("img");
+      image.src = activeFriend.avatarUrl;
+      image.alt = "";
+      ui.conversationAvatar.appendChild(image);
+    }
   }
 
   function switchToGlobal() {
@@ -309,6 +332,7 @@
   function updateOnlineSummary() {
     const count = state.onlineUsers.size;
     nodes().onlineSummary.textContent = `${count} learner${count === 1 ? "" : "s"} online`;
+    updateConversationIdentity();
   }
 
   function handleIncomingMessage(message) {
@@ -413,6 +437,13 @@
       state.typingTimer = setTimeout(() => {
         state.socket?.emit("chat:typing", { recipientId: state.activeFriend?.id, typing: false });
       }, 1200);
+    });
+
+    ui.input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        ui.form.requestSubmit();
+      }
     });
   }
 
