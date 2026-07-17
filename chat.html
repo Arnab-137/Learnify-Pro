@@ -90,7 +90,13 @@
               <span id="chat-connection-status" class="status-pill">Connecting</span>
             </header>
 
-            <div id="chat-message-list" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <div class="chat-message-stage">
+              <div id="chat-message-list" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions removals"></div>
+              <button id="chat-scroll-latest" class="chat-scroll-latest hidden" type="button" aria-label="Scroll to latest message">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                Latest
+              </button>
+            </div>
             <p id="chat-typing-status" class="chat-typing-status muted-text" aria-live="polite"></p>
 
             <form id="chat-message-form" class="chat-composer">
