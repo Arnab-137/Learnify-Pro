@@ -92,6 +92,12 @@
 
             <div class="chat-message-stage">
               <div id="chat-message-list" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions removals"></div>
+              <div id="chat-selection-bar" class="chat-selection-bar hidden" role="toolbar" aria-label="Selected message actions">
+                <strong>Message selected</strong>
+                <button id="chat-delete-me" class="chat-selection-action" type="button">Delete for me</button>
+                <button id="chat-delete-everyone" class="chat-selection-action danger hidden" type="button">Delete for everyone</button>
+                <button id="chat-selection-cancel" class="chat-selection-cancel" type="button">Cancel</button>
+              </div>
               <button id="chat-scroll-latest" class="chat-scroll-latest hidden" type="button" aria-label="Scroll to latest message">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 Latest
@@ -107,7 +113,7 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4.5 14-3-5.5L5 12Z"/><path d="M11.5 13.5 19 5"/></svg>
                 </button>
               </div>
-              <span class="chat-composer-hint">Press Return to send Â· Shift + Return for a new line</span>
+              <span class="chat-composer-hint">Press Return to send &middot; Shift + Return for a new line</span>
             </form>
             <p id="chat-error" class="chat-error" aria-live="assertive"></p>
           </main>
