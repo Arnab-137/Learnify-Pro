@@ -19,8 +19,15 @@ const STORAGE_KEYS = {
 
 const LIVE_API_BASE_URL = "https://learnify-pro.onrender.com/api";
 
+function isNativeApp() {
+  return Boolean(window.Capacitor?.isNativePlatform?.());
+}
+
 const DEFAULT_API_BASE_URL = (() => {
-  if (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  if (
+    !isNativeApp()
+    && (window.location.protocol === "file:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ) {
     return "http://localhost:5000/api";
   }
   return LIVE_API_BASE_URL;
@@ -384,7 +391,15 @@ function writeStorage(key, value) {
 }
 
 function getApiBaseUrl() {
-  return localStorage.getItem(STORAGE_KEYS.apiBaseUrl) || DEFAULT_API_BASE_URL;
+  const storedApiBaseUrl = localStorage.getItem(STORAGE_KEYS.apiBaseUrl);
+  const storedUrlIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api\/?$/i.test(storedApiBaseUrl || "");
+
+  if (isNativeApp() && storedUrlIsLocal) {
+    localStorage.removeItem(STORAGE_KEYS.apiBaseUrl);
+    return LIVE_API_BASE_URL;
+  }
+
+  return storedApiBaseUrl || DEFAULT_API_BASE_URL;
 }
 
 function warmBackend() {
@@ -550,7 +565,11 @@ async function apiRequest(path, options = {}) {
         continue;
       }
 
-      const networkError = new Error(`Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`);
+      const networkError = new Error(
+        isNativeApp()
+          ? "Unable to reach the Learnify server. Check your internet connection and try again."
+          : `Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`
+      );
       networkError.isNetworkError = true;
       throw networkError;
     }
