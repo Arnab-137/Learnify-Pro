@@ -17,8 +17,8 @@
   --radius-xl: 28px;
   --radius-lg: 20px;
   --radius-md: 14px;
-  --font-display: "Space Grotesk", sans-serif;
-  --font-body: "IBM Plex Sans", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.25, 0.9, 0.3, 1);
   --duration-fast: 260ms;
@@ -3754,6 +3754,17 @@ body[data-theme="dark"] .stat-card::after {
   .focus-utility-grid {
     grid-template-columns: 1fr !important;
   }
+}
+
+/* Let the browser skip layout and paint work for long, off-screen collections. */
+.subject-card,
+.lecture-card,
+.friend-chip,
+.leaderboard-row,
+.planner-day-card,
+.admin-log-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 @media (prefers-reduced-motion: reduce) {

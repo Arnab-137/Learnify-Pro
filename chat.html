@@ -8,7 +8,10 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#eef3f8">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://learnify-pro.onrender.com" crossorigin>
+  <link rel="preload" href="app.js" as="script">
+  <link rel="preload" href="chat.js" as="script">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="chat.css">
 </head>
@@ -123,8 +126,8 @@
       <nav class="mobile-nav" aria-label="Mobile Primary"></nav>
     </div>
   </div>
-  <script src="analytics.js"></script>
-  <script src="app.js"></script>
-  <script src="chat.js"></script>
+  <script src="analytics.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="chat.js" defer></script>
 </body>
 </html>

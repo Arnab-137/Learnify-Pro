@@ -279,6 +279,9 @@ let sharedExperienceInitialized = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   initializeSharedExperience();
+  if (document.body.dataset.page === "auth") {
+    void warmBackend();
+  }
   await bootstrapCurrentPage({ verifySession: true });
 });
 
@@ -382,6 +385,14 @@ function writeStorage(key, value) {
 
 function getApiBaseUrl() {
   return localStorage.getItem(STORAGE_KEYS.apiBaseUrl) || DEFAULT_API_BASE_URL;
+}
+
+function warmBackend() {
+  const backendOrigin = getApiBaseUrl().replace(/\/api\/?$/, "");
+  return fetch(`${backendOrigin}/health`, {
+    cache: "no-store",
+    mode: "cors"
+  }).catch(() => undefined);
 }
 
 function saveApiBaseUrl(value) {
@@ -499,6 +510,7 @@ function initializeSharedExperience() {
     return;
   }
   sharedExperienceInitialized = true;
+  applyTheme();
   ensureToastHost();
   ensurePageTransitionVeil();
   ensureSkipLink();
@@ -2114,7 +2126,6 @@ function renderCalendar(lectures, subjects, actions) {
       requestAnimationFrame(() => {
         const agenda = document.getElementById("calendar-agenda");
         if (agenda) {
-          agenda.scrollIntoView({ behavior: "smooth", block: "start" });
           agenda.focus({ preventScroll: true });
         }
       });
@@ -2566,6 +2577,11 @@ function bindThemeToggle() {
 function applyTheme() {
   const theme = readStorage(STORAGE_KEYS.theme, "light");
   document.body.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  document.querySelector("meta[name='theme-color']")?.setAttribute(
+    "content",
+    theme === "dark" ? "#0a1018" : "#eef3f8"
+  );
   document.querySelectorAll("#theme-toggle-slider").forEach((input) => {
     input.checked = theme === "dark";
   });
@@ -4321,4 +4337,3 @@ function renderFocusHistory() {
     `;
   }).join("");
 }
-
