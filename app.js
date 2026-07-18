@@ -3979,7 +3979,11 @@ function showQueuedToasts() {
 }
 
 function registerServiceWorker() {
-  if (!("serviceWorker" in navigator) || window.location.protocol === "file:") {
+  if (
+    !("serviceWorker" in navigator)
+    || window.location.protocol === "file:"
+    || window.Capacitor?.isNativePlatform?.()
+  ) {
     return;
   }
   window.addEventListener("load", () => {

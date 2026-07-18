@@ -1,5 +1,17 @@
 {
+  "scripts": {
+    "mobile:build": "node scripts/build-mobile.js",
+    "mobile:add": "npm run mobile:build && cap add android",
+    "mobile:sync": "npm run mobile:build && cap sync android",
+    "mobile:assets": "npx --yes @capacitor/assets@3.0.5 generate --android --iconBackgroundColor \"#eef3f8\" --iconBackgroundColorDark \"#0a1018\" --splashBackgroundColor \"#eef3f8\" --splashBackgroundColorDark \"#0a1018\"",
+    "mobile:open": "npm run mobile:sync && npm run mobile:assets && cap open android"
+  },
   "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/core": "8.4.2",
     "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2"
   }
 }

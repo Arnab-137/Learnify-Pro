@@ -25,6 +25,7 @@
   --duration-base: 420ms;
   --duration-slow: 720ms;
   --duration-luxury: 980ms;
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -53,6 +54,7 @@ body[data-theme="dark"] {
 body {
   margin: 0;
   min-height: 100vh;
+  padding-top: var(--safe-top);
   font-family: var(--font-body);
   color: var(--text);
   background:

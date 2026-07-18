@@ -17,6 +17,10 @@ function isAllowedRenderFrontendOrigin(origin = "") {
   return origin === "https://learnify-pro-frontend.onrender.com";
 }
 
+function isAllowedMobileAppOrigin(origin = "") {
+  return origin === "https://localhost" || origin === "capacitor://localhost";
+}
+
 function isAllowedOrigin(origin) {
   if (!origin) {
     return true;
@@ -27,7 +31,7 @@ function isAllowedOrigin(origin) {
     return true;
   }
 
-  if (isAllowedVercelOrigin(origin) || isAllowedRenderFrontendOrigin(origin)) {
+  if (isAllowedVercelOrigin(origin) || isAllowedRenderFrontendOrigin(origin) || isAllowedMobileAppOrigin(origin)) {
     return true;
   }
 

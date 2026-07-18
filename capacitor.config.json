@@ -1,0 +1,11 @@
+{
+  "appId": "com.learnify.elite",
+  "appName": "Learnify Elite",
+  "webDir": "mobile-dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#eef3f8"
+  }
+}
