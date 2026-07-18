@@ -20,6 +20,8 @@ const webAssets = [
   "insights.html",
   "leaderboard.html",
   "lectures.html",
+  "mobile.css",
+  "mobile.js",
   "planner.html",
   "react-insights.js",
   "service-worker.js",
@@ -40,4 +42,13 @@ for (const asset of webAssets) {
   fs.copyFileSync(source, path.join(outputDirectory, asset));
 }
 
-console.log(`Prepared ${webAssets.length} web assets for the Android app.`);
+const htmlAssets = webAssets.filter((asset) => asset.endsWith(".html"));
+for (const asset of htmlAssets) {
+  const outputPath = path.join(outputDirectory, asset);
+  const html = fs.readFileSync(outputPath, "utf8")
+    .replace("</head>", '  <link rel="stylesheet" href="mobile.css">\n</head>')
+    .replace("</body>", '  <script src="mobile.js" defer></script>\n</body>');
+  fs.writeFileSync(outputPath, html);
+}
+
+console.log(`Prepared ${webAssets.length} web assets and optimized ${htmlAssets.length} pages for Android.`);
