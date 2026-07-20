@@ -81,12 +81,7 @@ function parseSchedule(filePath) {
     throw new Error("CSV does not contain any schedule rows.");
   }
 
-  const assignedNumbers = new Map();
-  const usedNumbers = new Set();
-  const subjectsByName = new Map();
-  const lectures = [];
-
-  dataRows.forEach((sourceRow, index) => {
+  const scheduleRows = dataRows.map((sourceRow, index) => {
     const rowNumber = index + 2;
     if (sourceRow.length !== header.length) {
       throw new Error(`Row ${rowNumber} has ${sourceRow.length} columns; expected ${header.length}.`);
@@ -107,32 +102,47 @@ function parseSchedule(filePath) {
       throw new Error(`Row ${rowNumber} has an invalid video link.`);
     }
 
-    let lectureNumber = Number(rawLectureNumber);
     const subjectKey = subjectName.toLocaleLowerCase();
-    if (!rawLectureNumber) {
-      lectureNumber = (assignedNumbers.get(subjectKey) || 0) + 1;
-      assignedNumbers.set(subjectKey, lectureNumber);
-    }
-    if (!Number.isInteger(lectureNumber) || lectureNumber < 1) {
+    const lectureNumber = rawLectureNumber ? Number(rawLectureNumber) : null;
+    if (lectureNumber !== null && (!Number.isInteger(lectureNumber) || lectureNumber < 1)) {
       throw new Error(`Row ${rowNumber} has an invalid lecture number.`);
     }
 
-    const duplicateKey = `${subjectKey}:${lectureNumber}`;
-    if (usedNumbers.has(duplicateKey)) {
+    return { rowNumber, subjectName, subjectKey, title, youtubeLink, date, lectureNumber };
+  });
+
+  const usedNumbersBySubject = new Map();
+  scheduleRows.forEach(({ rowNumber, subjectName, subjectKey, lectureNumber }) => {
+    if (lectureNumber === null) return;
+    const usedNumbers = usedNumbersBySubject.get(subjectKey) || new Set();
+    if (usedNumbers.has(lectureNumber)) {
       throw new Error(`Row ${rowNumber} duplicates lecture number ${lectureNumber} for ${subjectName}.`);
     }
-    usedNumbers.add(duplicateKey);
+    usedNumbers.add(lectureNumber);
+    usedNumbersBySubject.set(subjectKey, usedNumbers);
+  });
 
-    if (!subjectsByName.has(subjectKey)) {
-      subjectsByName.set(subjectKey, { key: subjectKey, name: subjectName });
+  const subjectsByName = new Map();
+  const lectures = scheduleRows.map((row) => {
+    const usedNumbers = usedNumbersBySubject.get(row.subjectKey) || new Set();
+    let lectureNumber = row.lectureNumber;
+    if (lectureNumber === null) {
+      lectureNumber = 1;
+      while (usedNumbers.has(lectureNumber)) lectureNumber += 1;
+      usedNumbers.add(lectureNumber);
+      usedNumbersBySubject.set(row.subjectKey, usedNumbers);
     }
-    lectures.push({
-      title,
-      subjectKey,
-      youtubeLink,
-      date: new Date(`${date}T00:00:00.000Z`),
+
+    if (!subjectsByName.has(row.subjectKey)) {
+      subjectsByName.set(row.subjectKey, { key: row.subjectKey, name: row.subjectName });
+    }
+    return {
+      title: row.title,
+      subjectKey: row.subjectKey,
+      youtubeLink: row.youtubeLink,
+      date: new Date(`${row.date}T00:00:00.000Z`),
       lectureNumber
-    });
+    };
   });
 
   return { subjects: [...subjectsByName.values()], lectures };
