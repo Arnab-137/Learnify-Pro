@@ -40,6 +40,8 @@ const ANALYTICS_CACHE_VERSION = 2;
 const DEFAULT_DAILY_GOAL = 2;
 const DEFAULT_WEEKLY_CHALLENGE = 5;
 const DEFAULT_BREAK_SECONDS = 10 * 60;
+const API_REQUEST_TIMEOUT_MS = 20 * 1000;
+const BACKEND_WARMUP_TIMEOUT_MS = 10 * 1000;
 
 const DATA_SEED_VERSION = 6;
 
@@ -289,7 +291,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (document.body.dataset.page === "auth") {
     void warmBackend();
   }
-  await bootstrapCurrentPage({ verifySession: true });
+  try {
+    await bootstrapCurrentPage({ verifySession: true });
+  } catch (error) {
+    console.error("Page initialization failed:", error);
+    showToast(error.message || "Unable to load this page. Please try again.", "error");
+  }
 });
 
 async function bootstrapCurrentPage({ verifySession = true } = {}) {
@@ -404,10 +411,14 @@ function getApiBaseUrl() {
 
 function warmBackend() {
   const backendOrigin = getApiBaseUrl().replace(/\/api\/?$/, "");
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), BACKEND_WARMUP_TIMEOUT_MS);
+
   return fetch(`${backendOrigin}/health`, {
     cache: "no-store",
-    mode: "cors"
-  }).catch(() => undefined);
+    mode: "cors",
+    signal: controller.signal
+  }).catch(() => undefined).finally(() => window.clearTimeout(timeoutId));
 }
 
 function saveApiBaseUrl(value) {
@@ -554,25 +565,32 @@ async function apiRequest(path, options = {}) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let response;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
     try {
       response = await fetch(requestUrl, {
         ...options,
-        headers
+        headers,
+        signal: controller.signal
       });
     } catch (error) {
+      window.clearTimeout(timeoutId);
       if (attempt < maxAttempts) {
         await wait(450 * attempt);
         continue;
       }
 
       const networkError = new Error(
-        isNativeApp()
+        error.name === "AbortError"
+          ? "The Learnify server took too long to respond. Please try again."
+          : isNativeApp()
           ? "Unable to reach the Learnify server. Check your internet connection and try again."
           : `Unable to reach backend at ${getApiBaseUrl()}. Start the backend server and check the API base URL in Settings.`
       );
       networkError.isNetworkError = true;
       throw networkError;
     }
+    window.clearTimeout(timeoutId);
 
     let payload = null;
     try {
@@ -957,10 +975,29 @@ async function initAuthPage() {
         ? { name, email, password }
         : { email, password };
 
-      const response = await apiRequest(path, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
+      let response;
+      try {
+        response = await apiRequest(path, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+      } catch (error) {
+        const savedApiBaseUrl = localStorage.getItem(STORAGE_KEYS.apiBaseUrl);
+        const shouldRestoreDefaultApi = error.isNetworkError
+          && savedApiBaseUrl
+          && savedApiBaseUrl !== DEFAULT_API_BASE_URL;
+
+        if (!shouldRestoreDefaultApi) {
+          throw error;
+        }
+
+        localStorage.removeItem(STORAGE_KEYS.apiBaseUrl);
+        messageNode.textContent = "Restoring the default Learnify server...";
+        response = await apiRequest(path, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+      }
 
       const user = normalizeUser(response.data?.user);
       saveSession({
@@ -969,7 +1006,6 @@ async function initAuthPage() {
       });
       state.currentUser = user;
       messageNode.textContent = "Preparing your dashboard...";
-      await loadStudyData(true);
       window.location.href = "dashboard.html";
     } catch (error) {
       messageNode.textContent = error.message || "Authentication failed.";
